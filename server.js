@@ -15,9 +15,19 @@ const srcDb = path.join(__dirname, 'dxlr.db');
 const isVercel = !!process.env.VERCEL;
 const dbPath = isVercel ? '/tmp/dxlr.db' : srcDb;
 
-if (isVercel && !fs.existsSync(dbPath) && fs.existsSync(srcDb)) {
-  fs.copyFileSync(srcDb, dbPath);
-  console.log('✓ نسخ قاعدة البيانات إلى /tmp');
+if (isVercel) {
+  if (!fs.existsSync(dbPath) && fs.existsSync(srcDb)) {
+    fs.copyFileSync(srcDb, dbPath);
+    console.log('✓ نسخ قاعدة البيانات إلى /tmp');
+  }
+  if (fs.existsSync(dbPath)) {
+    try {
+      fs.chmodSync(dbPath, 0o666);
+      console.log('✓ تم تعيين صلاحيات الكتابة لقاعدة البيانات');
+    } catch (e) {
+      console.error('خطأ في تعيين الصلاحيات:', e.message);
+    }
+  }
 }
 
 const db = new sqlite3.Database(dbPath, err => {
@@ -66,9 +76,16 @@ async function verifyToken(req, res, next) {
   const token = req.headers['x-auth-token'] || req.headers['authorization']?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'مطلوب رمز المصادقة' });
 
-  db.get('SELECT s.*, u.id as uid, u.name, u.email, u.role FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > datetime("now")',
+  db.get('SELECT s.*, u.id as uid, u.name, u.email, u.role FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ?',
     [token], (err, session) => {
       if (err || !session) return res.status(401).json({ error: 'رمز مصادقة منتهي أو غير صالح' });
+      
+      // Validate expiration via JavaScript Date logic to avoid SQLite timezone bugs
+      const expiresAt = new Date(session.expires_at).getTime();
+      if (expiresAt < Date.now()) {
+        return res.status(401).json({ error: 'رمز مصادقة منتهي أو غير صالح' });
+      }
+
       req.user = { id: session.uid, name: session.name, email: session.email, role: session.role };
       next();
     });
