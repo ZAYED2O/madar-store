@@ -9,7 +9,16 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-const dbPath = path.join(__dirname, 'dxlr.db');
+
+// On Vercel (serverless), filesystem is read-only. Copy DB to /tmp for write access.
+const srcDb = path.join(__dirname, 'dxlr.db');
+const isVercel = !!process.env.VERCEL;
+const dbPath = isVercel ? '/tmp/dxlr.db' : srcDb;
+
+if (isVercel && !fs.existsSync(dbPath) && fs.existsSync(srcDb)) {
+  fs.copyFileSync(srcDb, dbPath);
+  console.log('✓ نسخ قاعدة البيانات إلى /tmp');
+}
 
 const db = new sqlite3.Database(dbPath, err => {
   if (err) { console.error('خطأ في الاتصال:', err.message); }
@@ -497,4 +506,9 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'خطأ داخلي في الخادم' });
 });
 
-app.listen(PORT, () => console.log(`🚀 متجر مدار يعمل على http://localhost:${PORT}`));
+// Vercel uses module.exports; local dev uses app.listen
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => console.log(`🚀 متجر مدار يعمل على http://localhost:${PORT}`));
+}
+
+module.exports = app;
