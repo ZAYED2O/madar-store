@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "init-db": "node init-db.js",
+    "build": "node init-db.js",
     "start": "node init-db.js && node server.js",
     "dev": "nodemon server.js"
   },
