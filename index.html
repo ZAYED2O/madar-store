@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مدار | ملابس مينيمال للمطورين وعشاق التقنية</title>
+  <meta name="description" content="مدار — تجربة تسوق فريدة تجمع بين الأناقة والجماليات الرقمية">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Nunito:wght@400;600;700;800&family=Outfit:wght@400;600;700;800;900&family=Montserrat+Alternates:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════
+     ANNOUNCEMENT BAR
+═════════════════════════════════════════════════════════════════ -->
+<div class="announcement-bar">
+  <div class="announcement-bar__ticker" id="ann-ticker">
+    <span data-i18n="ann1">شحن مجاني للطلبات فوق 1500 جنيه</span>
+    <span class="ticker-divider">✦</span>
+    <span data-i18n="ann2">مجموعات جديدة كل موسم</span>
+    <span class="ticker-divider">✦</span>
+    <span data-i18n="ann3">مصنوع في مصر بأعلى معايير الجودة</span>
+    <span class="ticker-divider">✦</span>
+    <span data-i18n="ann1">شحن مجاني للطلبات فوق 1500 جنيه</span>
+    <span class="ticker-divider">✦</span>
+    <span data-i18n="ann2">مجموعات جديدة كل موسم</span>
+    <span class="ticker-divider">✦</span>
+    <span data-i18n="ann3">مصنوع في مصر بأعلى معايير الجودة</span>
+    <span class="ticker-divider">✦</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SITE HEADER
+═════════════════════════════════════════════════════════════════ -->
+<header class="site-header" id="site-header">
+  <div class="header-container">
+    <div class="header-left">
+      <button class="icon-btn mobile-menu-toggle" id="mobile-menu-toggle" aria-label="القائمة">
+        <i class="fa-solid fa-bars fa-lg"></i>
+      </button>
+      <nav class="desktop-nav" id="desktop-nav">
+        <a href="#home" class="nav-link" data-i18n="navHome">الرئيسية</a>
+        <a href="#shop" class="nav-link" data-i18n="navShop">المتجر</a>
+        <a href="#about" class="nav-link" data-i18n="navAbout">عن مدار</a>
+        <a href="#contact" class="nav-link" data-i18n="navContact">تواصل</a>
+      </nav>
+    </div>
+    <div class="header-center">
+      <a href="#home" class="logo-link">
+        <img src="assets/logo.png" alt="مدار" class="logo-img" style="height: 4.5rem; max-height: 100%; display: block; object-fit: contain; transition: var(--t-fast);">
+      </a>
+    </div>
+    <div class="header-right">
+      <button class="btn lang-toggle-btn btn-sm" id="lang-toggle-btn">EN</button>
+      <button class="icon-btn" id="search-toggle-btn" aria-label="بحث" title="بحث">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
+      <button class="icon-btn" id="account-btn" aria-label="الحساب" title="الحساب">
+        <i class="fa-regular fa-user"></i>
+      </button>
+      <button class="icon-btn" id="wishlist-toggle-btn" aria-label="المفضلة">
+        <i class="fa-regular fa-heart"></i>
+        <span class="badge-count hidden" id="wishlist-count-badge">0</span>
+      </button>
+      <button class="icon-btn" id="cart-toggle-btn" aria-label="السلة">
+        <i class="fa-solid fa-bag-shopping"></i>
+        <span class="badge-count hidden" id="cart-count-badge">0</span>
+      </button>
+      <button class="icon-btn hidden" id="admin-panel-btn" aria-label="لوحة التحكم" title="لوحة التحكم">
+        <i class="fa-solid fa-screwdriver-wrench"></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════════════════════
+     TOAST CONTAINER
+═════════════════════════════════════════════════════════════════ -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CART DRAWER
+═════════════════════════════════════════════════════════════════ -->
+<div class="drawer cart-drawer" id="cart-drawer">
+  <div class="drawer-overlay" id="cart-overlay"></div>
+  <div class="drawer-content">
+    <div class="drawer-header">
+      <h2 class="drawer-title" data-i18n="cartTitle">السلة</h2>
+      <button class="close-btn" id="cart-close-btn">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <div class="shipping-progress-container">
+        <p class="shipping-info" id="shipping-info-text">أضف 1500 جنيه للحصول على شحن مجاني!</p>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="shipping-progress" style="width:0%"></div></div>
+      </div>
+      <div class="cart-items-container" id="cart-items-list">
+        <div class="empty-cart-message">
+          <i class="fa-solid fa-bag-shopping empty-cart-icon"></i>
+          <p data-i18n="cartEmpty">سلتك فارغة</p>
+        </div>
+      </div>
+      <div class="order-note-accordion">
+        <button class="accordion-header" id="cart-note-toggle">
+          <span data-i18n="orderNote">إضافة ملاحظة للطلب</span>
+          <i class="fa-solid fa-chevron-down fa-sm"></i>
+        </button>
+        <div class="accordion-content" id="cart-note-body">
+          <textarea id="order-note-field" placeholder="ملاحظاتك للطلب..."></textarea>
+        </div>
+      </div>
+      <div class="cart-summary" id="cart-summary-box">
+        <div class="summary-line">
+          <span data-i18n="subtotal">الإجمالي الجزئي</span>
+          <span class="subtotal-amount" id="cart-subtotal-val">0 جنيه</span>
+        </div>
+        <p class="tax-info" data-i18n="taxInfo">الشحن يُحسب عند الدفع</p>
+        <button class="btn primary-btn full-btn" id="checkout-btn" data-i18n="checkout">إتمام الشراء</button>
+        <button class="btn secondary-btn full-btn" id="view-cart-btn" style="margin-top:1rem" data-i18n="viewCart">عرض السلة</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     WISHLIST DRAWER
+═════════════════════════════════════════════════════════════════ -->
+<div class="drawer wishlist-drawer" id="wishlist-drawer">
+  <div class="drawer-overlay" id="wishlist-overlay"></div>
+  <div class="drawer-content">
+    <div class="drawer-header">
+      <h2 class="drawer-title" data-i18n="wishlistTitle">المفضلة</h2>
+      <button class="close-btn" id="wishlist-close-btn">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <div class="wishlist-items-container" id="wishlist-items-list">
+        <div class="empty-cart-message">
+          <i class="fa-regular fa-heart empty-cart-icon"></i>
+          <p data-i18n="wishlistEmpty">قائمة المفضلة فارغة</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     MOBILE NAV DRAWER
+═════════════════════════════════════════════════════════════════ -->
+<div class="drawer mobile-nav-drawer" id="mobile-nav-drawer">
+  <div class="drawer-overlay" id="mobile-nav-overlay"></div>
+  <div class="drawer-content" style="max-width:300px">
+    <div class="drawer-header">
+      <span class="drawer-title">مدار</span>
+      <button class="close-btn" id="mobile-nav-close">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <nav class="drawer-menu">
+        <a href="#home" class="drawer-link" data-i18n="navHome">الرئيسية</a>
+        <a href="#shop" class="drawer-link" data-i18n="navShop">المتجر</a>
+        <a href="#about" class="drawer-link" data-i18n="navAbout">عن مدار</a>
+        <a href="#contact" class="drawer-link" data-i18n="navContact">تواصل</a>
+      </nav>
+      <div class="drawer-footer-actions">
+        <a href="#" class="drawer-action-link" id="mobile-account-link">
+          <i class="fa-regular fa-user"></i>
+          <span data-i18n="myAccount">حسابي</span>
+        </a>
+        <a href="#" class="drawer-action-link" id="mobile-wishlist-link">
+          <i class="fa-regular fa-heart"></i>
+          <span data-i18n="myWishlist">المفضلة</span>
+        </a>
+        <button class="btn lang-toggle-btn btn-sm" id="mobile-lang-toggle" style="margin-top:1rem">EN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FILTER DRAWER
+═════════════════════════════════════════════════════════════════ -->
+<div class="drawer filter-drawer" id="filter-drawer">
+  <div class="drawer-overlay" id="filter-overlay"></div>
+  <div class="drawer-content" style="max-width:340px">
+    <div class="drawer-header">
+      <h2 class="drawer-title" data-i18n="filterTitle">تصفية وترتيب</h2>
+      <button class="close-btn" id="filter-close-btn">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <div class="filter-group">
+        <h3 class="filter-group-title" data-i18n="sortBy">ترتيب حسب</h3>
+        <select id="sort-select" class="sort-select">
+          <option value="default" data-i18n="sortDefault">الترتيب الافتراضي</option>
+          <option value="price_asc" data-i18n="sortPriceAsc">السعر: من الأقل للأعلى</option>
+          <option value="price_desc" data-i18n="sortPriceDesc">السعر: من الأعلى للأقل</option>
+          <option value="rating" data-i18n="sortRating">الأعلى تقييماً</option>
+          <option value="name" data-i18n="sortName">الاسم أ-ي</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <h3 class="filter-group-title" data-i18n="filterCategory">الفئة</h3>
+        <div class="filter-options-list" id="category-filter-list"></div>
+      </div>
+      <div class="filter-group">
+        <h3 class="filter-group-title" data-i18n="filterSize">المقاس</h3>
+        <div class="filter-sizes-grid">
+          <button class="size-filter-btn" data-size="M">M</button>
+          <button class="size-filter-btn" data-size="L">L</button>
+          <button class="size-filter-btn" data-size="XL">XL</button>
+          <button class="size-filter-btn" data-size="2XL">2XL</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <h3 class="filter-group-title" data-i18n="filterPrice">السعر</h3>
+        <input type="range" id="price-range-slider" min="0" max="2000" value="2000" step="50">
+        <div class="price-range-labels">
+          <span>0</span>
+          <span id="price-range-val">2000 جنيه</span>
+        </div>
+      </div>
+      <div class="filter-actions-row">
+        <button class="btn outline-btn" id="clear-filters-btn" data-i18n="clearFilters">مسح الكل</button>
+        <button class="btn primary-btn" id="apply-filters-btn" data-i18n="applyFilters">تطبيق</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SEARCH OVERLAY
+═════════════════════════════════════════════════════════════════ -->
+<div class="search-overlay" id="search-overlay">
+  <button class="search-overlay-close" id="search-close-btn">&times;</button>
+  <div class="search-container">
+    <p class="search-title" data-i18n="searchTitle">ابحث في المتجر</p>
+    <div class="search-input-wrapper">
+      <input type="search" id="search-input" placeholder="اسم المنتج..." autocomplete="off">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    </div>
+    <div class="search-results" id="search-results"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     ACCOUNT MODAL (Login/Register)
+═════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="account-modal">
+  <div class="modal-overlay" id="account-overlay"></div>
+  <div class="modal-content account-form-box">
+    <button class="modal-close" id="account-modal-close">&times;</button>
+    <div class="account-tabs">
+      <button class="tab-btn active" id="login-tab-btn" data-i18n="login">تسجيل الدخول</button>
+      <button class="tab-btn" id="register-tab-btn" data-i18n="register">إنشاء حساب</button>
+    </div>
+    <!-- Login Form -->
+    <div id="login-form-panel">
+      <div class="form-group">
+        <label for="login-email" data-i18n="email">البريد الإلكتروني</label>
+        <input type="email" id="login-email" placeholder="example@email.com">
+      </div>
+      <div class="form-group">
+        <label for="login-password" data-i18n="password">كلمة المرور</label>
+        <input type="password" id="login-password" placeholder="••••••••">
+      </div>
+      <button class="btn primary-btn full-btn" id="login-submit-btn" data-i18n="login">تسجيل الدخول</button>
+      <a href="#" class="forgot-pass-link" data-i18n="forgotPassword">نسيت كلمة المرور؟</a>
+    </div>
+    <!-- Register Form -->
+    <div id="register-form-panel" class="hidden">
+      <div class="form-group">
+        <label for="reg-name" data-i18n="fullName">الاسم الكامل</label>
+        <input type="text" id="reg-name" placeholder="محمد أحمد">
+      </div>
+      <div class="form-group">
+        <label for="reg-email" data-i18n="email">البريد الإلكتروني</label>
+        <input type="email" id="reg-email" placeholder="example@email.com">
+      </div>
+      <div class="form-group">
+        <label for="reg-password" data-i18n="password">كلمة المرور</label>
+        <input type="password" id="reg-password" placeholder="••••••••" id="reg-password">
+        <div class="password-strength">
+          <div class="strength-bar">
+            <div class="strength-bar-segment" id="s1"></div>
+            <div class="strength-bar-segment" id="s2"></div>
+            <div class="strength-bar-segment" id="s3"></div>
+            <div class="strength-bar-segment" id="s4"></div>
+          </div>
+          <span class="strength-label" id="strength-label"></span>
+        </div>
+      </div>
+      <button class="btn primary-btn full-btn" id="register-submit-btn" data-i18n="register">إنشاء حساب</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     PRODUCT QUICK VIEW MODAL
+═════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="product-modal">
+  <div class="modal-overlay" id="product-overlay"></div>
+  <div class="modal-content product-detail-box">
+    <button class="modal-close" id="product-modal-close">&times;</button>
+    <div class="product-detail-grid">
+      <div class="product-detail-images">
+        <div class="main-image-viewport">
+          <img id="modal-main-img" src="" alt="">
+          <span class="modal-badge sale-badge hidden" id="modal-badge"></span>
+        </div>
+        <div class="thumbnail-images-row" id="modal-thumbnails"></div>
+      </div>
+      <div class="product-detail-info">
+        <p class="modal-category" id="modal-category"></p>
+        <h2 class="modal-product-title" id="modal-title"></h2>
+        <div class="modal-rating-row">
+          <div class="rating-stars" id="modal-stars"></div>
+          <span class="rating-count" id="modal-reviews"></span>
+        </div>
+        <div class="modal-price-row">
+          <span class="modal-current-price" id="modal-price"></span>
+          <span class="modal-original-price" id="modal-original-price"></span>
+        </div>
+        <p class="modal-product-desc" id="modal-desc"></p>
+        <div class="modal-selection-group">
+          <div class="selection-header">
+            <span data-i18n="size">المقاس</span>
+            <button class="size-chart-btn" id="size-chart-btn" data-i18n="sizeGuide">دليل المقاسات</button>
+          </div>
+          <div class="size-options-wrapper" id="modal-sizes"></div>
+        </div>
+        <div class="modal-actions-wrapper">
+          <div class="quantity-picker">
+            <button class="qty-adjust-btn" id="modal-qty-minus"><i class="fa-solid fa-minus fa-sm"></i></button>
+            <input type="number" class="qty-input-box" id="modal-qty-input" value="1" min="1" max="10">
+            <button class="qty-adjust-btn" id="modal-qty-plus"><i class="fa-solid fa-plus fa-sm"></i></button>
+          </div>
+          <button class="btn primary-btn add-to-cart-action-btn" id="modal-add-to-cart" data-i18n="addToCart">إضافة للسلة</button>
+        </div>
+        <button class="btn full-btn buy-now-action-btn" id="modal-buy-now" data-i18n="buyNow">شراء الآن</button>
+        <button class="btn full-btn wishlist-toggle-action-btn" id="modal-wishlist-toggle" data-i18n="addToWishlist">إضافة للمفضلة</button>
+        <div class="info-accordions-group">
+          <div class="accordion-tab">
+            <button class="accordion-trigger" data-i18n="descDetails">وصف المنتج</button>
+            <div class="accordion-content"><p id="modal-acc-desc"></p></div>
+          </div>
+          <div class="accordion-tab">
+            <button class="accordion-trigger" data-i18n="shippingInfo">الشحن والإرجاع</button>
+            <div class="accordion-content">
+              <p data-i18n="shippingInfoDetails">شحن سريع خلال 2-5 أيام عمل داخل مصر. الإرجاع مجاني خلال 14 يوم.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SIZE GUIDE MODAL
+═════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="size-guide-modal">
+  <div class="modal-overlay" id="size-guide-overlay"></div>
+  <div class="modal-content size-guide-box">
+    <button class="modal-close" id="size-guide-close">&times;</button>
+    <h2 class="size-guide-title" data-i18n="sizeGuide">دليل المقاسات</h2>
+    <p class="size-guide-subtitle" data-i18n="sizeGuideDesc">المقاسات بالسنتيمتر</p>
+    <table class="size-table">
+      <thead><tr><th data-i18n="size">مقاس</th><th data-i18n="chest">الصدر</th><th data-i18n="waist">الخصر</th><th data-i18n="hip">الورك</th></tr></thead>
+      <tbody>
+        <tr><td>M</td><td>96–101</td><td>81–86</td><td>99–104</td></tr>
+        <tr><td>L</td><td>104–109</td><td>89–94</td><td>107–112</td></tr>
+        <tr><td>XL</td><td>112–117</td><td>97–102</td><td>115–120</td></tr>
+        <tr><td>2XL</td><td>120–125</td><td>105–110</td><td>123–128</td></tr>
+      </tbody>
+    </table>
+    <p class="size-guide-tips" data-i18n="sizeGuideNote">💡 في حالة الشك، نوصي باختيار المقاس الأكبر للحصول على قصة أكثر راحة.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CHECKOUT SUCCESS MODAL
+═════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="checkout-success-modal">
+  <div class="modal-overlay" id="checkout-success-overlay"></div>
+  <div class="modal-content checkout-success-box">
+    <div class="success-check-badge"><i class="fa-solid fa-circle-check"></i></div>
+    <h2 data-i18n="orderSuccess">تم استلام طلبك!</h2>
+    <p id="checkout-success-msg"></p>
+    <p class="order-id-label" id="checkout-order-id"></p>
+    <button class="btn primary-btn full-btn" id="checkout-success-close" data-i18n="continueShopping">متابعة التسوق</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     MAIN CONTENT — SPA VIEWS
+═════════════════════════════════════════════════════════════════ -->
+<main id="main-content">
+
+  <!-- ─── HOME PAGE VIEW ─────────────────────────────────────────────────── -->
+  <div class="page-view" id="view-home">
+    <!-- Hero Banner -->
+    <section class="hero-banner">
+      <div class="hero-content">
+        <p class="hero-eyebrow" data-i18n="heroEyebrow">مجموعة 2025</p>
+        <h1 class="hero-title"><span data-i18n="heroTitleLine1">اللبس الذي</span><br><span data-i18n="heroTitleLine2">يعبّر عنك</span></h1>
+        <p class="hero-subtitle" data-i18n="heroSubtitle">ملابس مصممة للمطورين وعشاق التقنية والمبدعين — حيث الأناقة تلتقي بالهوية الرقمية</p>
+        <div style="display:flex;gap:1.6rem;justify-content:center;flex-wrap:wrap">
+          <a href="#shop" class="btn primary-btn" data-i18n="shopNow">تسوق الآن</a>
+          <a href="#about" class="btn outline-btn" data-i18n="ourStory">قصتنا</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Products -->
+    <section class="section-container">
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-heading" data-i18n="featuredProducts">منتجات مختارة</h2>
+          <p class="section-subheading" data-i18n="featuredDesc">قطع يتم اختيارها بعناية لتناسب أسلوبك</p>
+        </div>
+        <a href="#shop" class="btn outline-btn btn-sm" data-i18n="viewAll">عرض الكل</a>
+      </div>
+      <div class="products-grid" id="home-products-grid"></div>
+    </section>
+
+    <!-- Collections -->
+    <section class="section-container" style="padding-top:0">
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-heading" data-i18n="collections">المجموعات</h2>
+          <p class="section-subheading" data-i18n="collectionsDesc">استكشف مجموعاتنا المنتقاة بعناية</p>
+        </div>
+      </div>
+      <div class="collections-grid" id="collections-grid">
+        <div class="collection-card" data-cat="تيشرتات" data-cat-en="T-Shirts">
+          <div class="collection-image-wrapper"><img src="assets/waffle_shirt_1.png" alt="تيشرتات" loading="lazy"></div>
+          <div class="collection-info">
+            <h3 class="collection-title" data-i18n="colTShirts">تيشرتات</h3>
+            <span class="collection-link" data-i18n="shopCollection">تسوق المجموعة <i class="fa-solid fa-arrow-left fa-sm"></i></span>
+          </div>
+        </div>
+        <div class="collection-card" data-cat="هوديات وبناطيل" data-cat-en="Sweatpants">
+          <div class="collection-image-wrapper"><img src="assets/developer_hoodie_1.png" alt="هوديات" loading="lazy"></div>
+          <div class="collection-info">
+            <h3 class="collection-title" data-i18n="colOutfits">هوديات وسويتشيرت</h3>
+            <span class="collection-link" data-i18n="shopCollection">تسوق المجموعة <i class="fa-solid fa-arrow-left fa-sm"></i></span>
+          </div>
+        </div>
+        <div class="collection-card" data-cat="جينز ودنيم" data-cat-en="Denim">
+          <div class="collection-image-wrapper"><img src="assets/denim_jacket_1.png" alt="دنيم" loading="lazy"></div>
+          <div class="collection-info">
+            <h3 class="collection-title" data-i18n="colDenim">جينز وجاكيت دنيم</h3>
+            <span class="collection-link" data-i18n="shopCollection">تسوق المجموعة <i class="fa-solid fa-arrow-left fa-sm"></i></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Narrative -->
+    <section class="narrative-banner section-container">
+      <div class="narrative-content">
+        <h2 class="narrative-title" data-i18n="narrativeTitle">مدار — أكثر من مجرد لبس</h2>
+        <p class="narrative-text" data-i18n="narrativeText">نؤمن أن ما ترتديه امتداد لهويتك. لهذا صممنا مدار ليكون الخيار الأول لمن يقدّرون الجمال البسيط والجودة الحقيقية في عالم التقنية والإبداع.</p>
+        <div class="features-list-row">
+          <div class="feature-item">
+            <div class="feature-icon"><i class="fa-solid fa-leaf"></i></div>
+            <h4 data-i18n="feat1Title">خامات صديقة للبيئة</h4>
+            <p data-i18n="feat1Desc">قطن عضوي ومواد مستدامة بالكامل</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon"><i class="fa-solid fa-hand-sparkles"></i></div>
+            <h4 data-i18n="feat2Title">جودة يدوية عالية</h4>
+            <p data-i18n="feat2Desc">كل قطعة تُصنع بدقة واهتمام شديد</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon"><i class="fa-solid fa-truck-fast"></i></div>
+            <h4 data-i18n="feat3Title">شحن سريع وآمن</h4>
+            <p data-i18n="feat3Desc">توصيل خلال 2-5 أيام عمل لكل مصر</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ─── SHOP PAGE VIEW ─────────────────────────────────────────────────── -->
+  <div class="page-view" id="view-shop">
+    <div class="shop-header">
+      <h1 class="shop-title" data-i18n="navShop">المتجر</h1>
+      <p class="shop-desc" data-i18n="shopDesc">اكتشف مجموعتنا الكاملة</p>
+    </div>
+    <div class="shop-toolbar">
+      <div class="toolbar-left">
+        <p class="products-count" id="shop-products-count"></p>
+        <div class="layout-toggle">
+          <button class="layout-btn active" id="grid-view-btn" title="عرض شبكي"><i class="fa-solid fa-grip"></i></button>
+          <button class="layout-btn" id="list-view-btn" title="عرض قائمة"><i class="fa-solid fa-list"></i></button>
+        </div>
+      </div>
+      <button class="btn secondary-btn btn-sm" id="filter-toggle-btn">
+        <i class="fa-solid fa-sliders"></i> <span data-i18n="filter">تصفية وترتيب</span>
+      </button>
+    </div>
+    <div class="active-filters-row" id="active-filters-row"></div>
+    <div class="section-container" style="padding-top:2.4rem">
+      <div class="products-grid" id="shop-products-grid"></div>
+    </div>
+  </div>
+
+  <!-- ─── CART PAGE VIEW ─────────────────────────────────────────────────── -->
+  <div class="page-view" id="view-cart">
+    <div class="section-container">
+      <h1 class="section-heading" data-i18n="cartTitle">السلة</h1>
+      <div class="cart-page-grid" id="cart-page-body">
+        <div class="cart-page-table-wrapper">
+          <div class="cart-page-header-row">
+            <span data-i18n="product">المنتج</span>
+            <span data-i18n="quantity">الكمية</span>
+            <span data-i18n="total">الإجمالي</span>
+          </div>
+          <div class="cart-page-items" id="cart-page-items-list"></div>
+        </div>
+        <div class="cart-page-side-panel">
+          <h3 class="cart-page-side-title" data-i18n="orderSummary">ملخص الطلب</h3>
+          <div class="summary-line"><span data-i18n="subtotal">الإجمالي الجزئي</span><span id="cp-subtotal">0 جنيه</span></div>
+          <div class="summary-line"><span data-i18n="shipping">الشحن</span><span id="cp-shipping">—</span></div>
+          <div class="summary-line" style="border-top:1px solid var(--border);padding-top:1.2rem;margin-top:0.8rem"><span data-i18n="total">الإجمالي</span><span id="cp-total" style="font-size:2.2rem;color:var(--cyan)">0 جنيه</span></div>
+          <button class="btn primary-btn full-btn" style="margin-top:2rem" id="cart-page-checkout-btn" data-i18n="checkout">إتمام الشراء</button>
+          <a href="#shop" class="btn outline-btn full-btn" style="margin-top:1.2rem" data-i18n="continueShopping">متابعة التسوق</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ABOUT PAGE VIEW ────────────────────────────────────────────────── -->
+  <div class="page-view" id="view-about">
+    <div class="about-hero-section">
+      <div class="about-hero-content">
+        <h1 class="about-title" data-i18n="aboutTitle">عن مدار</h1>
+        <p class="about-subtitle" data-i18n="aboutSubtitle">نحكي قصة الملابس التي تتحدث بلغتك</p>
+      </div>
+    </div>
+    <div class="section-container">
+      <div class="text-content-layout">
+        <div class="content-row">
+          <div>
+            <h2 class="col-heading" data-i18n="ourStory">قصتنا</h2>
+            <p class="col-paragraph" data-i18n="story1">بدأت مدار بفكرة بسيطة: لماذا لا يوجد لبس يعبّر حقاً عن عشاق التقنية والإبداع؟ أردنا أن نملأ هذا الفراغ بملابس تجمع بين الجماليات الرقمية والراحة اليومية.</p>
+            <p class="col-paragraph" data-i18n="story2">انطلقنا من القاهرة بفريق صغير من المصممين والمطورين الذين يعيشون ثقافة التقنية، وجمعتنا رغبة مشتركة في صنع شيء مختلف — شيء نلبسه نحن بفخر.</p>
+            <p class="col-paragraph" data-i18n="story3">اليوم، مدار أصبحت علامة تجارية مصرية تصدّر ملابسها لعشاق التقنية في أكثر من دولة عربية، مع الالتزام دائماً بالجودة والاستدامة.</p>
+          </div>
+          <div>
+            <div class="card-highlight">
+              <h3 class="col-subheading" data-i18n="ourValues">قيمنا</h3>
+              <ul class="custom-bullets">
+                <li data-i18n="val1">الأصالة: نصنع ما نصدّق به حقاً</li>
+                <li data-i18n="val2">الجودة: لا تنازل عن المعايير العالية</li>
+                <li data-i18n="val3">الاستدامة: مسؤولية تجاه بيئتنا</li>
+                <li data-i18n="val4">المجتمع: نبني مع عملائنا، لا لهم فقط</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── CONTACT PAGE VIEW ──────────────────────────────────────────────── -->
+  <div class="page-view" id="view-contact">
+    <div class="contact-header">
+      <h1 class="contact-title" data-i18n="navContact">تواصل معنا</h1>
+      <p class="contact-desc" data-i18n="contactDesc">نحن هنا دائماً للمساعدة</p>
+    </div>
+    <div class="section-container">
+      <div class="contact-grid">
+        <div class="contact-info-card">
+          <h3 class="info-card-title" data-i18n="contactInfo">معلومات التواصل</h3>
+          <div class="info-item">
+            <div class="info-icon"><i class="fa-solid fa-envelope"></i></div>
+            <div class="info-text"><h4 data-i18n="email">البريد الإلكتروني</h4><p>hello@madar.com</p></div>
+          </div>
+          <div class="info-item">
+            <div class="info-icon"><i class="fa-solid fa-phone"></i></div>
+            <div class="info-text"><h4 data-i18n="phone">الهاتف</h4><p>01000000000</p></div>
+          </div>
+          <div class="info-item">
+            <div class="info-icon"><i class="fa-solid fa-location-dot"></i></div>
+            <div class="info-text"><h4 data-i18n="address">العنوان</h4><p data-i18n="addressValue">القاهرة، مصر</p></div>
+          </div>
+        </div>
+        <div class="contact-form-card" id="contact-form-wrapper">
+          <h3 class="form-card-title" data-i18n="sendMessage">أرسل رسالة</h3>
+          <form id="contact-form">
+            <div class="form-row-2">
+              <div class="form-group"><label data-i18n="name">الاسم</label><input type="text" id="cf-name" required></div>
+              <div class="form-group"><label data-i18n="email">البريد</label><input type="email" id="cf-email" required></div>
+            </div>
+            <div class="form-group"><label data-i18n="subject">الموضوع</label><input type="text" id="cf-subject"></div>
+            <div class="form-group"><label data-i18n="message">الرسالة</label><textarea id="cf-message" rows="5" required></textarea></div>
+            <button type="submit" class="btn primary-btn full-btn" data-i18n="sendMessage">إرسال الرسالة</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── PROFILE PAGE VIEW ──────────────────────────────────────────────── -->
+  <div class="page-view" id="view-profile">
+    <div class="profile-header">
+      <div class="profile-header-inner">
+        <div class="profile-avatar" id="profile-avatar-circle">م</div>
+        <div class="profile-user-info">
+          <h1 class="profile-user-name" id="profile-name-display">اسم المستخدم</h1>
+          <p class="profile-user-email" id="profile-email-display">email@example.com</p>
+          <span class="profile-role-badge role-customer" id="profile-role-badge" data-i18n="roleCustomer">عميل</span>
+          <p class="profile-join-date" id="profile-join-date"></p>
+        </div>
+        <button class="btn outline-btn btn-sm" id="logout-btn" style="margin-right:auto">
+          <i class="fa-solid fa-right-from-bracket"></i> <span data-i18n="logout">تسجيل الخروج</span>
+        </button>
+      </div>
+    </div>
+    <div style="background:var(--bg-1);border-bottom:1px solid var(--border)">
+      <div class="profile-nav-tabs">
+        <button class="profile-tab-btn active" data-tab="info" data-i18n="profileInfo">بياناتي</button>
+        <button class="profile-tab-btn" data-tab="orders" data-i18n="myOrders">طلباتي</button>
+        <button class="profile-tab-btn" data-tab="messages" data-i18n="mySupportMessages">الدعم والرسائل</button>
+        <button class="profile-tab-btn" data-tab="security" data-i18n="security">الأمان</button>
+      </div>
+    </div>
+
+    <!-- Tab: Info -->
+    <div class="profile-tab-panel active" id="profile-tab-info">
+      <h2 class="profile-section-title" data-i18n="profileInfo">معلوماتي الشخصية</h2>
+      <form id="profile-info-form">
+        <div class="profile-info-grid">
+          <!-- Profile Avatar Upload Section -->
+          <div class="form-group" style="grid-column: 1 / -1; display: flex; align-items: center; gap: 2rem; margin-bottom: 2rem;">
+            <div class="profile-avatar-large" id="profile-avatar-large-preview" style="width: 8rem; height: 8rem; border-radius: var(--r-full); background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: 800; border: 2px solid var(--border); overflow: hidden; position: relative;">
+              <img id="prof-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+              <span id="prof-avatar-text">م</span>
+            </div>
+            <div>
+              <label class="btn outline-btn btn-sm" style="cursor:pointer; margin-bottom:0.5rem; display:inline-flex;">
+                <i class="fa-solid fa-camera"></i> <span data-i18n="changeAvatar">تغيير الصورة</span>
+                <input type="file" id="prof-avatar-file" accept="image/*" style="display:none;">
+              </label>
+              <input type="hidden" id="prof-avatar-url">
+              <p style="font-size:1.2rem; color:var(--text-muted);" id="prof-avatar-upload-status" data-i18n="avatarSizeHint">JPG, PNG أو WebP. بحد أقصى 2 ميجابايت.</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="fullName">الاسم الكامل</label>
+            <input type="text" id="prof-name" required>
+          </div>
+          <div class="form-group">
+            <label data-i18n="email">البريد الإلكتروني</label>
+            <input type="email" id="prof-email" readonly style="opacity:0.5">
+          </div>
+          <div class="form-group">
+            <label data-i18n="phone">رقم الهاتف</label>
+            <input type="tel" id="prof-phone" placeholder="01000000000">
+          </div>
+          <div class="form-group">
+            <label data-i18n="address">العنوان</label>
+            <input type="text" id="prof-address" placeholder="القاهرة، مصر">
+          </div>
+        </div>
+        <button type="submit" class="btn primary-btn" style="margin-top:2rem" data-i18n="saveChanges">حفظ التغييرات</button>
+      </form>
+    </div>
+
+    <!-- Tab: Orders -->
+    <div class="profile-tab-panel" id="profile-tab-orders">
+      <h2 class="profile-section-title" data-i18n="myOrders">طلباتي</h2>
+      <div class="admin-table-responsive">
+        <table class="admin-table profile-orders-table">
+          <thead>
+            <tr>
+              <th data-i18n="orderId">رقم الطلب</th>
+              <th data-i18n="orderDate">التاريخ</th>
+              <th data-i18n="items">المنتجات</th>
+              <th data-i18n="total">الإجمالي</th>
+              <th data-i18n="status">الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="profile-orders-tbody">
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:3rem" data-i18n="noOrders">لا توجد طلبات بعد</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Messages -->
+    <div class="profile-tab-panel" id="profile-tab-messages">
+      <h2 class="profile-section-title" data-i18n="mySupportMessages">رسائل الدعم الفني والاستفسارات</h2>
+      <div class="admin-table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th data-i18n="subject">الموضوع</th>
+              <th data-i18n="message">الرسالة</th>
+              <th data-i18n="status">الحالة</th>
+              <th data-i18n="replyText">الرد</th>
+            </tr>
+          </thead>
+          <tbody id="profile-messages-tbody">
+            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:3rem" data-i18n="noMessages">لا توجد رسائل بعد</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Security -->
+    <div class="profile-tab-panel" id="profile-tab-security">
+      <h2 class="profile-section-title" data-i18n="changePassword">تغيير كلمة المرور</h2>
+      <form id="change-password-form" style="max-width:440px">
+        <div class="form-group">
+          <label data-i18n="currentPassword">كلمة المرور الحالية</label>
+          <input type="password" id="curr-pass" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+          <label data-i18n="newPassword">كلمة المرور الجديدة</label>
+          <input type="password" id="new-pass" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+          <label data-i18n="confirmPassword">تأكيد كلمة المرور</label>
+          <input type="password" id="confirm-pass" placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn primary-btn" data-i18n="changePassword">تغيير كلمة المرور</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ─── ADMIN PANEL VIEW ───────────────────────────────────────────────── -->
+  <div class="page-view" id="view-admin">
+    <div class="admin-header-bar">
+      <div class="admin-header-container">
+        <div class="admin-logo">
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+          <span data-i18n="adminTitle">لوحة تحكم مدار</span>
+        </div>
+        <span style="font-size:1.3rem;color:var(--text-muted)" data-i18n="adminSubtitle">إدارة شاملة للمتجر</span>
+      </div>
+    </div>
+
+    <div class="section-container">
+      <!-- Stats -->
+      <div class="admin-metrics-row" id="admin-metrics">
+        <div class="metric-card">
+          <div class="metric-icon indigo"><i class="fa-solid fa-dollar-sign"></i></div>
+          <div><div class="metric-label" data-i18n="revenue">إجمالي المبيعات</div><div class="metric-value" id="stat-revenue">—</div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon cyan"><i class="fa-solid fa-bag-shopping"></i></div>
+          <div><div class="metric-label" data-i18n="totalOrders">عدد الطلبات</div><div class="metric-value" id="stat-orders">—</div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon gold"><i class="fa-solid fa-shirt"></i></div>
+          <div><div class="metric-label" data-i18n="totalProducts">المنتجات</div><div class="metric-value" id="stat-products">—</div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon green"><i class="fa-solid fa-users"></i></div>
+          <div><div class="metric-label" data-i18n="customers">العملاء</div><div class="metric-value" id="stat-customers">—</div></div>
+        </div>
+      </div>
+
+      <!-- Admin Tabs -->
+      <div class="admin-nav-tabs">
+        <button class="admin-tab-btn active" data-admin-tab="orders" data-i18n="manageOrders">الطلبات</button>
+        <button class="admin-tab-btn" data-admin-tab="products" data-i18n="manageInventory">المنتجات</button>
+        <button class="admin-tab-btn" data-admin-tab="users" data-i18n="manageUsers">المستخدمون</button>
+        <button class="admin-tab-btn" data-admin-tab="cms" data-i18n="manageContent">محتوى الموقع</button>
+        <button class="admin-tab-btn" data-admin-tab="announcements" data-i18n="manageAnnouncements">شريط الإعلانات</button>
+        <button class="admin-tab-btn" data-admin-tab="messages" data-i18n="manageMessages">الرسائل</button>
+      </div>
+
+      <!-- ORDERS TAB -->
+      <div id="admin-tab-orders">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+          <h2 class="panel-title" style="margin:0" data-i18n="manageOrders">إدارة الطلبات</h2>
+        </div>
+        <div class="admin-table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th data-i18n="orderId">رقم الطلب</th>
+                <th data-i18n="customer">العميل</th>
+                <th data-i18n="items">المنتجات</th>
+                <th data-i18n="total">الإجمالي</th>
+                <th data-i18n="orderDate">التاريخ</th>
+                <th data-i18n="status">الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="admin-orders-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PRODUCTS TAB -->
+      <div id="admin-tab-products" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+          <h2 class="panel-title" style="margin:0" data-i18n="manageInventory">إدارة المنتجات</h2>
+          <button class="btn cyan-btn btn-sm" id="add-product-btn"><i class="fa-solid fa-plus"></i> <span data-i18n="addProduct">إضافة منتج</span></button>
+        </div>
+        <!-- Product Form (hidden by default) -->
+        <div id="product-form-wrapper" class="hidden" style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);padding:3rem;margin-bottom:3rem">
+          <h3 id="product-form-title" data-i18n="addProduct" style="margin-bottom:2rem;color:#fff">إضافة منتج جديد</h3>
+          <form id="product-form">
+            <div class="form-row-2">
+              <div class="form-group"><label data-i18n="productNameEn">اسم المنتج (English)</label><input type="text" id="pf-name-en" required></div>
+              <div class="form-group"><label data-i18n="productNameAr">اسم المنتج (عربي)</label><input type="text" id="pf-name-ar" required></div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group"><label data-i18n="price">السعر (جنيه)</label><input type="number" id="pf-price" required min="0"></div>
+              <div class="form-group"><label data-i18n="originalPrice">السعر الأصلي</label><input type="number" id="pf-original-price" min="0"></div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label data-i18n="categoryAr">الفئة (عربي)</label>
+                <select id="pf-category-ar">
+                  <option value="تيشرتات">تيشرتات</option>
+                  <option value="هوديات وبناطيل">هوديات وبناطيل</option>
+                  <option value="ملابس كاملة">ملابس كاملة</option>
+                  <option value="جينز ودنيم">جينز ودنيم</option>
+                  <option value="تريكو ومحبوكات">تريكو ومحبوكات</option>
+                  <option value="بناطيل رياضية">بناطيل رياضية</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label data-i18n="categoryEn">الفئة (English)</label>
+                <select id="pf-category-en">
+                  <option value="T-Shirts">T-Shirts</option>
+                  <option value="Outfits">Outfits</option>
+                  <option value="Denim">Denim</option>
+                  <option value="Knitted Wear">Knitted Wear</option>
+                  <option value="Sweatpants">Sweatpants</option>
+                  <option value="Tank Tops">Tank Tops</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group"><label data-i18n="badgeEn">الشارة (English)</label><input type="text" id="pf-badge-en" placeholder="مثال: Sale 20%"></div>
+              <div class="form-group"><label data-i18n="badgeAr">الشارة (عربي)</label><input type="text" id="pf-badge-ar" placeholder="مثال: خصم ٢٠٪"></div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label data-i18n="imagePrimary">الصورة الرئيسية</label>
+                <input type="text" id="pf-img-primary" placeholder="assets/product.png" required>
+                <div style="display:flex;align-items:center;gap:1rem;margin-top:0.6rem">
+                  <input type="file" id="pf-file-primary" accept="image/*" style="display:none">
+                  <button type="button" class="btn secondary-btn btn-sm" onclick="document.getElementById('pf-file-primary').click()"><i class="fa-solid fa-cloud-arrow-up"></i> رفع من الجهاز</button>
+                  <span id="pf-file-primary-name" style="font-size:1.2rem;color:var(--text-muted)"></span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label data-i18n="imageSecondary">الصورة الثانوية</label>
+                <input type="text" id="pf-img-secondary" placeholder="assets/product_2.png">
+                <div style="display:flex;align-items:center;gap:1rem;margin-top:0.6rem">
+                  <input type="file" id="pf-file-secondary" accept="image/*" style="display:none">
+                  <button type="button" class="btn secondary-btn btn-sm" onclick="document.getElementById('pf-file-secondary').click()"><i class="fa-solid fa-cloud-arrow-up"></i> رفع من الجهاز</button>
+                  <span id="pf-file-secondary-name" style="font-size:1.2rem;color:var(--text-muted)"></span>
+                </div>
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group"><label data-i18n="descEn">الوصف (English)</label><textarea id="pf-desc-en" rows="3"></textarea></div>
+              <div class="form-group"><label data-i18n="descAr">الوصف (عربي)</label><textarea id="pf-desc-ar" rows="3"></textarea></div>
+            </div>
+            <div style="display:flex;gap:1.6rem;margin-top:1rem">
+              <button type="submit" class="btn primary-btn" id="pf-submit-btn" data-i18n="saveProduct">حفظ المنتج</button>
+              <button type="button" class="btn outline-btn" id="pf-cancel-btn" data-i18n="cancel">إلغاء</button>
+            </div>
+          </form>
+        </div>
+        <div class="admin-table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>صورة</th>
+                <th data-i18n="productName">اسم المنتج</th>
+                <th data-i18n="category">الفئة</th>
+                <th data-i18n="price">السعر</th>
+                <th data-i18n="actions">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="admin-products-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- USERS TAB -->
+      <div id="admin-tab-users" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+          <h2 class="panel-title" style="margin:0" data-i18n="manageUsers">إدارة المستخدمين</h2>
+        </div>
+        <div class="admin-table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th data-i18n="userId">المعرف</th>
+                <th data-i18n="name">الاسم</th>
+                <th data-i18n="email">البريد</th>
+                <th data-i18n="role">الدور</th>
+                <th data-i18n="joinDate">تاريخ التسجيل</th>
+                <th data-i18n="actions">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CMS TAB -->
+      <div id="admin-tab-cms" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+          <h2 class="panel-title" style="margin:0" data-i18n="manageContent">التحكم بمحتوى الموقع (CMS)</h2>
+        </div>
+        <div id="admin-cms-list">
+          <div style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</div>
+        </div>
+      </div>
+
+      <!-- ANNOUNCEMENTS TAB -->
+      <div id="admin-tab-announcements" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+          <h2 class="panel-title" style="margin:0" data-i18n="manageAnnouncements">إدارة شريط الإعلانات</h2>
+          <button class="btn cyan-btn btn-sm" id="add-ann-btn"><i class="fa-solid fa-plus"></i> <span data-i18n="addAnnouncement">إضافة إعلان</span></button>
+        </div>
+
+        <!-- Announcement Form -->
+        <div id="ann-form-wrapper" class="hidden" style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);padding:3rem;margin-bottom:3rem">
+          <h3 id="ann-form-title" class="panel-title" style="margin-top:0;margin-bottom:2rem" data-i18n="addAnnouncement">إضافة إعلان جديد</h3>
+          <form id="ann-form">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label data-i18n="annTextAr">النص العربي</label>
+                <input type="text" id="af-text-ar" required placeholder="مثال: شحن مجاني للطلبات فوق 1500 جنيه">
+              </div>
+              <div class="form-group">
+                <label data-i18n="annTextEn">النص الإنجليزي</label>
+                <input type="text" id="af-text-en" required placeholder="Example: Free shipping on orders over 1500 EGP">
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label data-i18n="order">الترتيب</label>
+                <input type="number" id="af-order" value="0">
+              </div>
+              <div class="form-group" style="display:flex;align-items:center;gap:1rem;margin-top:2.8rem">
+                <input type="checkbox" id="af-active" checked style="width:auto;height:auto">
+                <label for="af-active" style="margin:0" data-i18n="active">نشط</label>
+              </div>
+            </div>
+            <div style="display:flex;gap:1.2rem;margin-top:2rem">
+              <button type="submit" class="btn primary-btn" id="af-submit-btn" data-i18n="save">حفظ الإعلان</button>
+              <button type="button" class="btn outline-btn" id="af-cancel-btn" data-i18n="cancel">إلغاء</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th data-i18n="annTextAr">النص العربي</th>
+                <th data-i18n="annTextEn">النص الإنجليزي</th>
+                <th data-i18n="order">الترتيب</th>
+                <th data-i18n="status">الحالة</th>
+                <th data-i18n="actions">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="admin-ann-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MESSAGES TAB -->
+      <div id="admin-tab-messages" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+          <h2 class="panel-title" style="margin:0" data-i18n="manageMessages">الرسائل الواردة</h2>
+        </div>
+        <div class="admin-table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th data-i18n="name">المرسل</th>
+                <th data-i18n="email">البريد</th>
+                <th data-i18n="subject">الموضوع</th>
+                <th data-i18n="message">الرسالة</th>
+                <th data-i18n="replyText">الرد</th>
+                <th data-i18n="actions">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="admin-messages-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MESSAGE REPLY MODAL -->
+      <div class="modal" id="reply-modal">
+        <div class="modal-overlay" id="reply-overlay"></div>
+        <div class="modal-content" style="max-width:500px">
+          <button class="modal-close" id="reply-modal-close">&times;</button>
+          <h2 class="panel-title" data-i18n="replyMessage" style="margin-bottom:2.4rem">الرد على الرسالة</h2>
+          <div style="margin-bottom:2rem;background:var(--bg-1);padding:1.6rem;border-radius:var(--r-sm)">
+            <p style="font-size:1.35rem;color:var(--text-muted);margin-bottom:0.6rem"><strong data-i18n="message">الرسالة:</strong></p>
+            <p id="reply-orig-message" style="font-size:1.45rem;color:var(--text-primary);line-height:1.6"></p>
+          </div>
+          <div class="form-group">
+            <label data-i18n="replyText">نص الرد</label>
+            <textarea id="reply-textarea" rows="5" placeholder="اكتب ردك هنا..." style="width:100%"></textarea>
+          </div>
+          <div style="display:flex;gap:1.2rem">
+            <button class="btn primary-btn" id="reply-submit-btn" data-i18n="send">إرسال الرد</button>
+            <button class="btn outline-btn" id="reply-cancel-btn" data-i18n="cancel">إلغاء</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /section-container -->
+  </div><!-- /view-admin -->
+
+</main>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FOOTER
+═════════════════════════════════════════════════════════════════ -->
+<footer class="site-footer" id="site-footer">
+  <div class="footer-container">
+    <div class="footer-col">
+      <div class="footer-logo" style="display: inline-block; background: #ffffff; padding: 0.8rem; border-radius: var(--r-md); margin-bottom: 1.6rem; border: 1px solid var(--border);">
+        <img src="assets/logo.png" alt="مدار" class="logo-img" style="height: 5.5rem; width: auto; object-fit: contain; display: block;">
+      </div>
+      <p class="footer-brand-desc" data-i18n="footerBrand">ملابس للمطورين وعشاق التقنية — جودة حقيقية وتصميم يعبّر عنك.</p>
+      <div class="footer-social-icons">
+        <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="#" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+        <a href="#" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4 data-i18n="footerShop">المتجر</h4>
+      <ul class="footer-links-list">
+        <li><a href="#shop" data-i18n="newArrivals">وصل حديثاً</a></li>
+        <li><a href="#shop" data-i18n="navShop">جميع المنتجات</a></li>
+        <li><a href="#shop" data-i18n="footerSale">العروض</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4 data-i18n="footerHelp">مساعدة</h4>
+      <ul class="footer-links-list">
+        <li><a href="#about" data-i18n="navAbout">عن مدار</a></li>
+        <li><a href="#contact" data-i18n="navContact">تواصل</a></li>
+        <li><a href="#" data-i18n="sizeGuide">دليل المقاسات</a></li>
+        <li><a href="#" data-i18n="footerReturn">سياسة الإرجاع</a></li>
+      </ul>
+    </div>
+    <div class="footer-col newsletter-col">
+      <h4 data-i18n="newsletter">النشرة البريدية</h4>
+      <p data-i18n="newsletterDesc">اشترك وكن أول من يعرف بالمجموعات والعروض الجديدة</p>
+      <div class="newsletter-input-wrapper">
+        <input type="email" id="newsletter-input" placeholder="بريدك الإلكتروني...">
+        <button id="newsletter-btn" aria-label="اشتراك"><i class="fa-solid fa-arrow-left"></i></button>
+      </div>
+      <p class="newsletter-success-msg hidden" id="newsletter-msg" data-i18n="newsletterSuccess">✓ تم الاشتراك بنجاح!</p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-bottom-container">
+      <span data-i18n="copyright">© 2025 مدار. جميع الحقوق محفوظة.</span>
+      <div class="payment-methods-icons">
+        <i class="fa-brands fa-cc-visa" title="Visa"></i>
+        <i class="fa-brands fa-cc-mastercard" title="Mastercard"></i>
+        <i class="fa-solid fa-mobile-screen" title="فوري/انستاباي"></i>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- MOBILE TOOLBAR -->
+<div class="mobile-sticky-toolbar">
+  <button class="toolbar-tab" data-route="home"><i class="fa-solid fa-house"></i><span data-i18n="navHome">الرئيسية</span></button>
+  <button class="toolbar-tab" data-route="shop"><i class="fa-solid fa-shirt"></i><span data-i18n="navShop">المتجر</span></button>
+  <button class="toolbar-tab" id="mobile-search-tab"><i class="fa-solid fa-magnifying-glass"></i><span data-i18n="search">بحث</span></button>
+  <button class="toolbar-tab" id="mobile-cart-tab">
+    <i class="fa-solid fa-bag-shopping"></i>
+    <span data-i18n="cartTitle">السلة</span>
+    <span class="toolbar-badge-count hidden" id="mobile-cart-badge">0</span>
+  </button>
+  <button class="toolbar-tab" id="mobile-account-tab"><i class="fa-regular fa-user"></i><span data-i18n="myAccount">حسابي</span></button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
