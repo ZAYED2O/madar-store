@@ -214,8 +214,8 @@ html[dir="rtl"] .drawer-action-link { flex-direction: row-reverse; }
 .drawer-action-link:hover { background: var(--bg-2); color: var(--text-primary); }
 
 /* ─── MODALS ──────────────────────────────────────────────────────────────── */
-.modal { position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center; visibility: hidden; transition: visibility var(--t-norm); padding: 2rem; }
-.modal.active { visibility: visible; }
+.modal { position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center; visibility: hidden; pointer-events: none; transition: visibility var(--t-norm); padding: 2rem; }
+.modal.active { visibility: visible; pointer-events: auto; }
 .modal-overlay { position: absolute; inset: 0; background: var(--bg-overlay); backdrop-filter: blur(6px); opacity: 0; transition: opacity 0.3s; }
 .modal.active .modal-overlay { opacity: 1; }
 .modal-content {
