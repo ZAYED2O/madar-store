@@ -179,13 +179,14 @@ html[dir="rtl"] .header-right { justify-content: flex-start; flex-direction: row
 
 .logo-text { font-family: var(--font-logo); font-size: 2.6rem; font-weight: 900; letter-spacing: 0.08em; color: var(--text-primary); }
 html[dir="rtl"] .logo-text { font-family: var(--font-ar); letter-spacing: 0.02em; }
-.logo-link { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; text-decoration: none; }
+.logo-link { display: flex; flex-direction: column; align-items: center; gap: 0; text-decoration: none; }
 .logo-brand-name {
   font-family: var(--font-heading); font-size: 1.8rem; font-weight: 900;
   letter-spacing: 0.4em; color: var(--text-primary); text-transform: uppercase;
   line-height: 1; transition: opacity var(--t-fast);
   background: linear-gradient(135deg, var(--accent), var(--cyan));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-top: -0.8rem;
 }
 .logo-link:hover .logo-brand-name { opacity: 0.8; }
 .logo-link:hover .logo-text { color: var(--accent); }
@@ -208,6 +209,7 @@ html[dir="rtl"] .cart-drawer .drawer-content, html[dir="rtl"] .wishlist-drawer .
 .mobile-nav-drawer .drawer-content, .filter-drawer .drawer-content { left: 0; transform: translate3d(-100%,0,0); }
 html[dir="rtl"] .mobile-nav-drawer .drawer-content, html[dir="rtl"] .filter-drawer .drawer-content { left:auto;right:0;transform:translate3d(100%,0,0);border-left:none;border-right:1px solid var(--border); }
 .mobile-nav-drawer.active .drawer-content, .filter-drawer.active .drawer-content { transform: translate3d(0,0,0); }
+.drawer.active .drawer-content { transform: translate3d(0,0,0) !important; }
 
 .drawer-header { padding: 2rem 2.4rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
 html[dir="rtl"] .drawer-header { flex-direction: row-reverse; }
