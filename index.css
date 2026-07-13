@@ -146,19 +146,18 @@ html[dir="rtl"] .badge-count { right: auto; left: 1px; }
   background: var(--text-primary);
   height: var(--ann-h); overflow: hidden;
   position: relative;
-  display: flex; align-items: center; justify-content: center;
 }
-.announcement-bar__center {
-  display: flex; align-items: center; justify-content: center;
-  gap: 1.2rem; white-space: nowrap;
-  font-size: 1.15rem; font-weight: 600; letter-spacing: 0.05em; color: rgba(255,255,255,0.85);
+.announcement-bar::before, .announcement-bar::after {
+  content: ''; position: absolute; top: 0; width: 5rem; height: 100%; z-index: 2; pointer-events: none;
 }
-.ann-brand {
-  font-family: var(--font-heading); font-size: 1.25rem; font-weight: 900;
-  letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase;
-}
-.ticker-divider { color: var(--accent) !important; font-size: 1rem; }
+.announcement-bar::before { left: 0; background: linear-gradient(90deg, var(--text-primary), transparent); }
+.announcement-bar::after  { right: 0; background: linear-gradient(270deg, var(--text-primary), transparent); }
+.announcement-bar__ticker { display: flex; white-space: nowrap; animation: ticker-slide 35s linear infinite; font-size: 1.15rem; font-weight: 600; letter-spacing: 0.05em; color: rgba(255,255,255,0.85); }
+html[dir="rtl"] .announcement-bar__ticker { animation: ticker-slide-rtl 35s linear infinite; letter-spacing: 0; }
 .announcement-bar__ticker span { padding: 0 2.4rem; }
+.ticker-divider { color: var(--accent) !important; font-size: 1rem; }
+@keyframes ticker-slide     { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-50%,0,0)} }
+@keyframes ticker-slide-rtl { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(50%,0,0)}  }
 
 /* ─── HEADER ──────────────────────────────────────────────────────────────── */
 .site-header {
@@ -179,6 +178,15 @@ html[dir="rtl"] .header-right { justify-content: flex-start; flex-direction: row
 
 .logo-text { font-family: var(--font-logo); font-size: 2.6rem; font-weight: 900; letter-spacing: 0.08em; color: var(--text-primary); }
 html[dir="rtl"] .logo-text { font-family: var(--font-ar); letter-spacing: 0.02em; }
+.logo-link { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; text-decoration: none; }
+.logo-brand-name {
+  font-family: var(--font-heading); font-size: 1.1rem; font-weight: 900;
+  letter-spacing: 0.35em; color: var(--text-primary); text-transform: uppercase;
+  line-height: 1; transition: color var(--t-fast);
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.logo-link:hover .logo-brand-name { opacity: 0.8; }
 .logo-link:hover .logo-text { color: var(--accent); }
 
 .mobile-menu-toggle { display: none; }
