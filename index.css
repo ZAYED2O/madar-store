@@ -146,13 +146,14 @@ html[dir="rtl"] .badge-count { right: auto; left: 1px; }
   background: var(--text-primary);
   height: var(--ann-h); overflow: hidden;
   position: relative;
+  display: flex; align-items: center;
 }
 .announcement-bar::before, .announcement-bar::after {
   content: ''; position: absolute; top: 0; width: 5rem; height: 100%; z-index: 2; pointer-events: none;
 }
 .announcement-bar::before { left: 0; background: linear-gradient(90deg, var(--text-primary), transparent); }
 .announcement-bar::after  { right: 0; background: linear-gradient(270deg, var(--text-primary), transparent); }
-.announcement-bar__ticker { display: flex; white-space: nowrap; animation: ticker-slide 35s linear infinite; font-size: 1.15rem; font-weight: 600; letter-spacing: 0.05em; color: rgba(255,255,255,0.85); }
+.announcement-bar__ticker { display: flex; white-space: nowrap; animation: ticker-slide 35s linear infinite; font-size: 1.15rem; font-weight: 600; letter-spacing: 0.05em; color: rgba(255,255,255,0.85); align-items: center; }
 html[dir="rtl"] .announcement-bar__ticker { animation: ticker-slide-rtl 35s linear infinite; letter-spacing: 0; }
 .announcement-bar__ticker span { padding: 0 2.4rem; }
 .ticker-divider { color: var(--accent) !important; font-size: 1rem; }
@@ -180,9 +181,9 @@ html[dir="rtl"] .header-right { justify-content: flex-start; flex-direction: row
 html[dir="rtl"] .logo-text { font-family: var(--font-ar); letter-spacing: 0.02em; }
 .logo-link { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; text-decoration: none; }
 .logo-brand-name {
-  font-family: var(--font-heading); font-size: 1.1rem; font-weight: 900;
-  letter-spacing: 0.35em; color: var(--text-primary); text-transform: uppercase;
-  line-height: 1; transition: color var(--t-fast);
+  font-family: var(--font-heading); font-size: 1.8rem; font-weight: 900;
+  letter-spacing: 0.4em; color: var(--text-primary); text-transform: uppercase;
+  line-height: 1; transition: opacity var(--t-fast);
   background: linear-gradient(135deg, var(--accent), var(--cyan));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
