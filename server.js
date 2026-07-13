@@ -6,6 +6,9 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const multer = require('multer');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'madar_secret_key_123456';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -74,21 +77,19 @@ function generateToken() {
 
 async function verifyToken(req, res, next) {
   const token = req.headers['x-auth-token'] || req.headers['authorization']?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'مطلوب رمز المصادقة' });
+  if (!token) {
+    console.log('JWT Verification: No token provided');
+    return res.status(401).json({ error: 'مطلوب رمز المصادقة' });
+  }
 
-  db.get('SELECT s.*, u.id as uid, u.name, u.email, u.role FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ?',
-    [token], (err, session) => {
-      if (err || !session) return res.status(401).json({ error: 'رمز مصادقة منتهي أو غير صالح' });
-      
-      // Validate expiration via JavaScript Date logic to avoid SQLite timezone bugs
-      const expiresAt = new Date(session.expires_at).getTime();
-      if (expiresAt < Date.now()) {
-        return res.status(401).json({ error: 'رمز مصادقة منتهي أو غير صالح' });
-      }
-
-      req.user = { id: session.uid, name: session.name, email: session.email, role: session.role };
-      next();
-    });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = { id: decoded.id, name: decoded.name, email: decoded.email, role: decoded.role };
+    next();
+  } catch (err) {
+    console.error('JWT Verification Failed for token:', token.substring(0, 15) + '...', 'Error:', err.message);
+    return res.status(401).json({ error: 'رمز مصادقة منتهي أو غير صالح' });
+  }
 }
 
 function requireAdmin(req, res, next) {
@@ -168,9 +169,11 @@ app.post('/api/register', async (req, res) => {
       [name, email, hash, role, initials], function(err) {
         if (err) return res.status(500).json({ error: 'خطأ في إنشاء الحساب' });
 
-        const token = generateToken();
-        const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        db.run('INSERT INTO sessions (user_id,token,expires_at) VALUES (?,?,?)', [this.lastID, token, expires]);
+        const token = jwt.sign(
+          { id: this.lastID, name, email, role },
+          JWT_SECRET,
+          { expiresIn: '7d' }
+        );
 
         res.status(201).json({ success: true, token, user: { id: this.lastID, name, email, role, avatarInitials: initials, avatarUrl: null } });
       });
@@ -188,9 +191,11 @@ app.post('/api/login', (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'كلمة المرور غير صحيحة' });
 
-    const token = generateToken();
-    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    db.run('INSERT INTO sessions (user_id,token,expires_at) VALUES (?,?,?)', [user.id, token, expires]);
+    const token = jwt.sign(
+      { id: user.id, name: user.name, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
     res.json({
       success: true, token,
@@ -201,10 +206,8 @@ app.post('/api/login', (req, res) => {
 
 // ─── AUTH: Logout ─────────────────────────────────────────────────────────────
 app.post('/api/logout', verifyToken, (req, res) => {
-  const token = req.headers['x-auth-token'] || req.headers['authorization']?.replace('Bearer ', '');
-  db.run('DELETE FROM sessions WHERE token = ?', [token], () => {
-    res.json({ success: true, message: 'تم تسجيل الخروج' });
-  });
+  res.json({ success: true, message: 'تم تسجيل الخروج' });
+});
 });
 
 // ─── USER: Get Profile ────────────────────────────────────────────────────────
