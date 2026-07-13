@@ -52,20 +52,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
 // Multer storage configuration for product images
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = path.join(__dirname, 'assets');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'product-' + uniqueSuffix + ext);
-  }
-});
+const storage = isVercel
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: function (req, file, cb) {
+        const dir = path.join(__dirname, 'assets');
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+      },
+      filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, 'product-' + uniqueSuffix + ext);
+      }
+    });
 const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
@@ -106,7 +108,10 @@ function requireAdmin(req, res, next) {
 // ─── FILE UPLOAD ─────────────────────────────────────────────────────────────
 app.post('/api/upload', verifyToken, requireAdmin, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'لم يتم تحميل أي ملف' });
-  res.json({ success: true, filePath: 'assets/' + req.file.filename });
+  const filePath = req.file.buffer
+    ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+    : 'assets/' + req.file.filename;
+  res.json({ success: true, filePath });
 });
 
 // ─── PRODUCTS ─────────────────────────────────────────────────────────────────
@@ -238,7 +243,10 @@ app.put('/api/profile', verifyToken, (req, res) => {
 // ─── USER: Upload Avatar ──────────────────────────────────────────────────────
 app.post('/api/profile/upload-avatar', verifyToken, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'لم يتم تحميل أي ملف' });
-  res.json({ success: true, filePath: 'assets/' + req.file.filename });
+  const filePath = req.file.buffer
+    ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+    : 'assets/' + req.file.filename;
+  res.json({ success: true, filePath });
 });
 
 // ─── USER: Get My Support Messages ────────────────────────────────────────────
