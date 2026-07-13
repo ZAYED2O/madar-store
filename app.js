@@ -592,10 +592,8 @@ function renderCartDrawer() {
   const subtotalEl = $('cart-subtotal-val');
   if (subtotalEl) subtotalEl.textContent = formatCurrency(sub);
 
-  // Event delegation — clone to remove old listeners
-  const newList = list.cloneNode(true);
-  list.parentNode.replaceChild(newList, list);
-  newList.addEventListener('click', e => {
+  // Event delegation
+  list.addEventListener('click', e => {
     const btn = e.target.closest('[data-idx]');
     if (!btn) return;
     const idx = parseInt(btn.dataset.idx);
@@ -606,7 +604,7 @@ function renderCartDrawer() {
       cart.splice(idx, 1);
     }
     saveCart(); renderCartBadge(); renderCartDrawer();
-  });
+  }, { once: false });
 }
 
 function renderCartPage() {
@@ -646,9 +644,7 @@ function renderCartPage() {
   if (cpShip) cpShip.textContent = shipping === 0 ? (currentLang === 'ar' ? 'مجاني' : 'Free') : formatCurrency(shipping);
   if (cpTotal) cpTotal.textContent = formatCurrency(total);
 
-  const newList2 = list.cloneNode(true);
-  list.parentNode.replaceChild(newList2, list);
-  newList2.addEventListener('click', e => {
+  list.addEventListener('click', e => {
     const btn = e.target.closest('[data-idx]');
     if (!btn) return;
     const idx = parseInt(btn.dataset.idx);
