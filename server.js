@@ -208,7 +208,6 @@ app.post('/api/login', (req, res) => {
 app.post('/api/logout', verifyToken, (req, res) => {
   res.json({ success: true, message: 'تم تسجيل الخروج' });
 });
-});
 
 // ─── USER: Get Profile ────────────────────────────────────────────────────────
 app.get('/api/profile', verifyToken, (req, res) => {
