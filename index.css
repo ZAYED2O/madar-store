@@ -189,6 +189,7 @@ html[dir="rtl"] .logo-text { font-family: var(--font-ar); letter-spacing: 0.02em
 }
 .logo-link:hover .logo-brand-name { opacity: 0.8; }
 .logo-link:hover .logo-text { color: var(--accent); }
+.logo-img { mix-blend-mode: multiply; }
 
 .mobile-menu-toggle { display: none; }
 .lang-toggle-btn { padding: 0.5rem 1.2rem !important; font-size: 1.2rem !important; height: 3.2rem; border-radius: var(--r-full) !important; border: 1.5px solid var(--border) !important; font-weight: 700 !important; }
