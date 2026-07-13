@@ -592,8 +592,10 @@ function renderCartDrawer() {
   const subtotalEl = $('cart-subtotal-val');
   if (subtotalEl) subtotalEl.textContent = formatCurrency(sub);
 
-  // Event delegation
-  list.addEventListener('click', e => {
+  // Event delegation — clone to remove old listeners
+  const newList = list.cloneNode(true);
+  list.parentNode.replaceChild(newList, list);
+  newList.addEventListener('click', e => {
     const btn = e.target.closest('[data-idx]');
     if (!btn) return;
     const idx = parseInt(btn.dataset.idx);
@@ -644,7 +646,9 @@ function renderCartPage() {
   if (cpShip) cpShip.textContent = shipping === 0 ? (currentLang === 'ar' ? 'مجاني' : 'Free') : formatCurrency(shipping);
   if (cpTotal) cpTotal.textContent = formatCurrency(total);
 
-  list.addEventListener('click', e => {
+  const newList2 = list.cloneNode(true);
+  list.parentNode.replaceChild(newList2, list);
+  newList2.addEventListener('click', e => {
     const btn = e.target.closest('[data-idx]');
     if (!btn) return;
     const idx = parseInt(btn.dataset.idx);
