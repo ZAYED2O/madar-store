@@ -37,8 +37,12 @@ const db = new sqlite3.Database(dbPath, err => {
   if (err) { console.error('خطأ في الاتصال:', err.message); }
   else {
     console.log('✓ متصل بقاعدة بيانات مدار');
-    // Ensure avatar_url column exists in users table
+    // Ensure new columns exist
     db.run("ALTER TABLE users ADD COLUMN avatar_url TEXT", () => {});
+    db.run("ALTER TABLE orders ADD COLUMN customer_name TEXT", () => {});
+    db.run("ALTER TABLE orders ADD COLUMN customer_phone TEXT", () => {});
+    db.run("ALTER TABLE orders ADD COLUMN customer_address TEXT", () => {});
+    db.run("ALTER TABLE orders ADD COLUMN customer_city TEXT", () => {});
   }
 });
 
@@ -289,32 +293,39 @@ app.post('/api/contact', (req, res) => {
 
 // ─── ORDERS: Create ───────────────────────────────────────────────────────────
 app.post('/api/orders', (req, res) => {
-  const { items, note, subtotal, shipping, total } = req.body;
-  const token = req.headers['x-auth-token'];
+  const { items, note, subtotal, shipping, total, customerName, customerPhone, customerAddress, customerCity } = req.body;
+  const token = req.headers['x-auth-token'] || req.headers['authorization']?.replace('Bearer ', '');
   
   if (!items || !total) return res.status(400).json({ error: 'بيانات الطلب ناقصة' });
+  if (!customerName || !customerPhone || !customerAddress || !customerCity) {
+    return res.status(400).json({ error: 'الرجاء ملء جميع معلومات الشحن والاتصال' });
+  }
 
   const orderId = `MADAR-${Math.floor(10000 + Math.random() * 90000)}`;
   const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
 
+  let userId = null;
   if (token) {
-    db.get('SELECT user_id FROM sessions WHERE token = ? AND expires_at > datetime("now")', [token], (err, session) => {
-      const userId = session ? session.user_id : null;
-      db.run('INSERT INTO orders (order_id,user_id,items,note,subtotal,shipping,total) VALUES (?,?,?,?,?,?,?)',
-        [orderId, userId, itemsStr, note, subtotal, shipping, total], function(err) {
-          if (err) return res.status(500).json({ error: 'خطأ في حفظ الطلب' });
-          res.status(201).json({ success: true, orderId, dbRowId: this.lastID, total });
-        });
-    });
-  } else {
-    db.run('INSERT INTO orders (order_id,user_id,items,note,subtotal,shipping,total) VALUES (?,?,?,?,?,?,?)',
-      [orderId, null, itemsStr, note, subtotal, shipping, total], function(err) {
-        if (err) return res.status(500).json({ error: 'خطأ في حفظ الطلب' });
-        res.status(201).json({ success: true, orderId, dbRowId: this.lastID, total });
-      });
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      userId = decoded.id;
+    } catch (e) {
+      // Ignore invalid token, treat as guest
+    }
   }
-});
 
+  db.run(
+    'INSERT INTO orders (order_id,user_id,items,note,subtotal,shipping,total,customer_name,customer_phone,customer_address,customer_city) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+    [orderId, userId, itemsStr, note, subtotal, shipping, total, customerName, customerPhone, customerAddress, customerCity],
+    function(err) {
+      if (err) {
+        console.error('Error saving order:', err.message);
+        return res.status(500).json({ error: 'خطأ في حفظ الطلب' });
+      }
+      res.status(201).json({ success: true, orderId, dbRowId: this.lastID, total });
+    }
+  );
+});
 // ─── ADMIN: Get All Users ─────────────────────────────────────────────────────
 app.get('/api/admin/users', verifyToken, requireAdmin, (req, res) => {
   db.all('SELECT id,name,email,role,avatar_initials,phone,created_at FROM users ORDER BY id DESC', [], (err, rows) => {

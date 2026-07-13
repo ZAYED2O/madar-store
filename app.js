@@ -78,7 +78,7 @@ const translations = {
     subject: 'الموضوع', message: 'الرسالة', sendMessage: 'إرسال الرسالة',
     contactInfo: 'معلومات التواصل', contactDesc: 'نحن هنا دائماً للمساعدة',
     aboutTitle: 'عن مدار', aboutSubtitle: 'نحكي قصة الملابس التي تتحدث بلغتك',
-    orderSuccess: 'تم استلام طلبك!',
+    orderSuccess: 'تم استلام طلبك!', shippingDetails: 'تفاصيل الشحن', checkoutDetails: 'معلومات الشحن والتوصيل', city: 'المحافظة / المدينة', orderNotes: 'ملاحظات الطلب (اختياري)', confirmOrder: 'تأكيد وإتمام الطلب',
     footerBrand: 'ملابس للمطورين وعشاق التقنية — جودة حقيقية وتصميم يعبّر عنك.',
     footerShop: 'المتجر', footerHelp: 'مساعدة', newsletter: 'النشرة البريدية',
     newsletterDesc: 'اشترك وكن أول من يعرف بالمجموعات والعروض الجديدة',
@@ -165,7 +165,7 @@ const translations = {
     subject: 'Subject', message: 'Message', sendMessage: 'Send Message',
     contactInfo: 'Contact Info', contactDesc: "We're always here to help",
     aboutTitle: 'About Madar', aboutSubtitle: 'The story of clothes that speak your language',
-    orderSuccess: 'Order Received!',
+    orderSuccess: 'Order Received!', shippingDetails: 'Shipping Details', checkoutDetails: 'Shipping & Delivery Info', city: 'City / Governorate', orderNotes: 'Order Notes (optional)', confirmOrder: 'Confirm & Place Order',
     footerBrand: 'Minimalist clothing for developers and tech enthusiasts — real quality.',
     footerShop: 'Shop', footerHelp: 'Help', newsletter: 'Newsletter',
     newsletterDesc: 'Subscribe to be first to know about new collections and offers',
@@ -661,16 +661,66 @@ function renderCartPage() {
 // ─── CHECKOUT ─────────────────────────────────────────────────────────────────
 async function processCheckout() {
   if (cart.length === 0) { showToast(currentLang === 'ar' ? 'السلة فارغة' : 'Cart is empty', 'error'); return; }
+  
+  // Pre-fill fields if user is logged in
+  if (currentUser) {
+    if ($('checkout-name')) $('checkout-name').value = currentUser.name || '';
+    if ($('checkout-phone')) $('checkout-phone').value = currentUser.phone || '';
+    if ($('checkout-address')) $('checkout-address').value = currentUser.address || '';
+    if ($('checkout-city')) $('checkout-city').value = currentUser.city || '';
+  } else {
+    // Clear fields for guest
+    if ($('checkout-name')) $('checkout-name').value = '';
+    if ($('checkout-phone')) $('checkout-phone').value = '';
+    if ($('checkout-address')) $('checkout-address').value = '';
+    if ($('checkout-city')) $('checkout-city').value = '';
+  }
+  
+  // Set the note in the form from the note field in the cart if any
+  if ($('checkout-notes') && $('order-note-field')) {
+    $('checkout-notes').value = $('order-note-field').value || '';
+  }
+
+  // Open the checkout details modal!
+  openModal('checkout-info-modal');
+}
+
+async function submitOrder() {
+  if (cart.length === 0) { showToast(currentLang === 'ar' ? 'السلة فارغة' : 'Cart is empty', 'error'); return; }
+  
+  const customerName = $('checkout-name').value.trim();
+  const customerPhone = $('checkout-phone').value.trim();
+  const customerCity = $('checkout-city').value.trim();
+  const customerAddress = $('checkout-address').value.trim();
+  const note = $('checkout-notes').value.trim();
+
+  if (!customerName || !customerPhone || !customerCity || !customerAddress) {
+    showToast(currentLang === 'ar' ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields', 'error');
+    return;
+  }
+
   const sub = cart.reduce((acc, c) => acc + c.price * c.qty, 0);
   const shipping = sub >= 1500 ? 0 : 80;
   const total = sub + shipping;
-  const note = $('order-note-field')?.value || '';
 
   try {
+    // Close the info modal to prevent double click
+    closeModal('checkout-info-modal');
+    
     const res = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': authToken || '' },
-      body: JSON.stringify({ items: cart, note, subtotal: sub, shipping, total })
+      body: JSON.stringify({
+        items: cart,
+        note,
+        subtotal: sub,
+        shipping,
+        total,
+        customerName,
+        customerPhone,
+        customerAddress,
+        customerCity
+      })
     });
     const data = await res.json();
     if (data.success) {
@@ -681,6 +731,8 @@ async function processCheckout() {
       if (successMsg) successMsg.textContent = currentLang === 'ar' ? `سيتم الشحن خلال 2-5 أيام عمل. الإجمالي: ${formatCurrency(total)}` : `Will ship within 2-5 business days. Total: ${formatCurrency(total)}`;
       if (orderIdEl) orderIdEl.textContent = data.orderId;
       openModal('checkout-success-modal');
+    } else {
+      showToast(data.error || 'Checkout error', 'error');
     }
   } catch (e) {
     showToast(currentLang === 'ar' ? 'خطأ في معالجة الطلب' : 'Checkout error', 'error');
@@ -1128,7 +1180,7 @@ async function loadAdminOrders() {
     const statusOptions = ['قيد الانتظار','قيد التجهيز','تم الشحن','ملغي'];
 
     if (!orders.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:3rem">${currentLang === 'ar' ? 'لا توجد طلبات' : 'No orders yet'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:3rem">${currentLang === 'ar' ? 'لا توجد طلبات' : 'No orders yet'}</td></tr>`;
       return;
     }
     orders.forEach(o => {
@@ -1137,6 +1189,13 @@ async function loadAdminOrders() {
       tr.innerHTML = `
         <td style="font-weight:700;color:var(--accent)">${o.order_id}</td>
         <td>${o.user_name || (currentLang === 'ar' ? 'ضيف' : 'Guest')}</td>
+        <td>
+          <div style="font-size:0.9em;line-height:1.4">
+            <strong>${o.customer_name || ''}</strong><br>
+            <span style="color:var(--text-muted)">${o.customer_phone || ''}</span><br>
+            <span>${o.customer_city || ''} - ${o.customer_address || ''}</span>
+          </div>
+        </td>
         <td>${itemCount} ${currentLang === 'ar' ? 'قطعة' : 'items'}</td>
         <td style="color:var(--cyan);font-weight:800">${formatCurrency(o.total)}</td>
         <td>${formatDate(o.created_at)}</td>
@@ -1907,7 +1966,7 @@ async function init() {
   });
 
   // ── Modal Closes ──
-  ['account', 'product', 'size-guide', 'checkout-success'].forEach(name => {
+  ['account', 'product', 'size-guide', 'checkout-success', 'checkout-info'].forEach(name => {
     $(`${name}-modal-close`)?.addEventListener('click', () => closeModal(`${name}-modal`));
     $(`${name}-overlay`)?.addEventListener('click', () => closeModal(`${name}-modal`));
     $(`${name}-close`)?.addEventListener('click', () => closeModal(`${name}-modal`));

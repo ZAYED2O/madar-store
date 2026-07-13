@@ -393,6 +393,42 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════
+     CHECKOUT INFO MODAL
+     ═════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="checkout-info-modal">
+  <div class="modal-overlay" id="checkout-info-overlay"></div>
+  <div class="modal-content" style="max-width: 500px; width: 90%; padding: 2.5rem; border-radius: 12px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem">
+      <h3 style="margin:0; font-size:1.8rem; font-weight:600" data-i18n="checkoutDetails">معلومات الشحن والتوصيل</h3>
+      <button class="modal-close-btn" id="checkout-info-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer">&times;</button>
+    </div>
+    <form id="checkout-info-form" onsubmit="event.preventDefault(); submitOrder();">
+      <div class="form-group" style="margin-bottom:1.2rem">
+        <label for="checkout-name" style="display:block; margin-bottom:0.5rem; font-weight:500" data-i18n="fullName">الاسم بالكامل</label>
+        <input type="text" id="checkout-name" required placeholder="الاسم بالكامل" style="width:100%; padding:0.8rem; border:1px solid var(--border); border-radius:6px; background:var(--bg-light)">
+      </div>
+      <div class="form-group" style="margin-bottom:1.2rem">
+        <label for="checkout-phone" style="display:block; margin-bottom:0.5rem; font-weight:500" data-i18n="phoneNumber">رقم الهاتف</label>
+        <input type="tel" id="checkout-phone" required placeholder="رقم الهاتف للتواصل" style="width:100%; padding:0.8rem; border:1px solid var(--border); border-radius:6px; background:var(--bg-light)">
+      </div>
+      <div class="form-group" style="margin-bottom:1.2rem">
+        <label for="checkout-city" style="display:block; margin-bottom:0.5rem; font-weight:500" data-i18n="city">المحافظة / المدينة</label>
+        <input type="text" id="checkout-city" required placeholder="مثال: القاهرة" style="width:100%; padding:0.8rem; border:1px solid var(--border); border-radius:6px; background:var(--bg-light)">
+      </div>
+      <div class="form-group" style="margin-bottom:1.2rem">
+        <label for="checkout-address" style="display:block; margin-bottom:0.5rem; font-weight:500" data-i18n="address">العنوان التفصيلي</label>
+        <textarea id="checkout-address" required placeholder="اسم الشارع، رقم المبنى والمنطقة" rows="3" style="width:100%; padding:0.8rem; border:1px solid var(--border); border-radius:6px; background:var(--bg-light); resize:vertical"></textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:1.5rem">
+        <label for="checkout-notes" style="display:block; margin-bottom:0.5rem; font-weight:500" data-i18n="orderNotes">ملاحظات إضافية (اختياري)</label>
+        <textarea id="checkout-notes" placeholder="أي تعليمات خاصة بالتسليم" rows="2" style="width:100%; padding:0.8rem; border:1px solid var(--border); border-radius:6px; background:var(--bg-light); resize:vertical"></textarea>
+      </div>
+      <button type="submit" class="btn primary-btn full-btn" style="width:100%" data-i18n="confirmOrder">تأكيد وإتمام الطلب</button>
+    </form>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
      MAIN CONTENT — SPA VIEWS
 ═════════════════════════════════════════════════════════════════ -->
 <main id="main-content">
@@ -786,7 +822,8 @@
             <thead>
               <tr>
                 <th data-i18n="orderId">رقم الطلب</th>
-                <th data-i18n="customer">العميل</th>
+                <th data-i18n="customer">الحساب</th>
+                <th data-i18n="shippingDetails">تفاصيل الشحن</th>
                 <th data-i18n="items">المنتجات</th>
                 <th data-i18n="total">الإجمالي</th>
                 <th data-i18n="orderDate">التاريخ</th>
@@ -794,7 +831,7 @@
               </tr>
             </thead>
             <tbody id="admin-orders-tbody">
-              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
+              <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
             </tbody>
           </table>
         </div>

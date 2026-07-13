@@ -67,6 +67,10 @@ db.serialize(async () => {
     shipping REAL NOT NULL,
     total REAL NOT NULL,
     status TEXT DEFAULT 'قيد الانتظار',
+    customer_name TEXT,
+    customer_phone TEXT,
+    customer_address TEXT,
+    customer_city TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`, err => { if (!err) console.log('✓ جدول الطلبات'); });
 
