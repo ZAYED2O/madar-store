@@ -131,6 +131,15 @@ app.post('/api/upload', verifyToken, requireAdmin, upload.single('image'), (req,
 });
 
 // ─── PRODUCTS ─────────────────────────────────────────────────────────────────
+app.get('/api/debug-db', (req, res) => {
+  client.execute('SELECT * FROM products WHERE 1=1')
+    .then(r => res.json({ success: true, count: r.rows.length }))
+    .catch(err => {
+      console.error('Debug DB Error:', err);
+      res.status(500).json({ error: err.message, stack: err.stack, name: err.name, code: err.code });
+    });
+});
+
 app.get('/api/products', (req, res) => {
   const { q, category, lang } = req.query;
   let query = 'SELECT * FROM products WHERE 1=1';
