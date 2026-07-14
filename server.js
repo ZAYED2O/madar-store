@@ -119,7 +119,9 @@ client.execute(`CREATE TABLE IF NOT EXISTS reviews (
       });
     }
   });
-}).catch(() => {});
+}).catch((err) => {
+  console.error('Error creating reviews table:', err);
+});
 
 console.log('Connected to:', dbUrl.startsWith('file:') ? 'Local SQLite' : 'Turso Cloud DB');
 
