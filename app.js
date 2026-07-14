@@ -249,7 +249,7 @@ function statusBadgeClass(s) {
 
 async function fetchCMSContent() {
   try {
-    const res = await fetch('/api/content');
+    const res = await fetch('/api/content?t=' + Date.now());
     const dynamicContent = await res.json();
     if (dynamicContent && dynamicContent.ar && dynamicContent.en) {
       translations.ar = { ...translations.ar, ...dynamicContent.ar };
@@ -343,7 +343,7 @@ window.addEventListener('hashchange', () => {
 // ─── PRODUCTS API ─────────────────────────────────────────────────────────────
 async function fetchProducts(query = '') {
   try {
-    const url = query ? `/api/products?q=${encodeURIComponent(query)}` : '/api/products';
+    const url = query ? `/api/products?q=${encodeURIComponent(query)}&t=${Date.now()}` : `/api/products?t=${Date.now()}`;
     const res = await fetch(url);
     const data = await res.json();
     return data;
@@ -1453,7 +1453,7 @@ async function loadAdminCMS() {
 // ─── ANNOUNCEMENTS TICKER & CMS ──────────────────────────────────────────────
 async function renderAnnouncements() {
   try {
-    const res = await fetch('/api/announcements');
+    const res = await fetch('/api/announcements?t=' + Date.now());
     const anns = await res.json();
     const ticker = $('ann-ticker');
     if (!ticker) return;
