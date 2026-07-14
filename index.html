@@ -669,6 +669,7 @@
         <button class="profile-tab-btn" data-tab="orders" data-i18n="myOrders">طلباتي</button>
         <button class="profile-tab-btn" data-tab="messages" data-i18n="mySupportMessages">الدعم والرسائل</button>
         <button class="profile-tab-btn" data-tab="security" data-i18n="security">الأمان</button>
+        <button class="profile-tab-btn" data-tab="settings" data-i18n="siteSettings">إعدادات الموقع</button>
       </div>
     </div>
 
@@ -774,6 +775,20 @@
         </div>
         <button type="submit" class="btn primary-btn" data-i18n="changePassword">تغيير كلمة المرور</button>
       </form>
+    </div>
+
+    <!-- Tab: Site Settings -->
+    <div class="profile-tab-panel" id="profile-tab-settings">
+      <h2 class="profile-section-title" data-i18n="siteSettings">إعدادات الموقع</h2>
+      <div style="background:var(--bg-0); padding:2.4rem; border-radius:var(--r-md); border:1px solid var(--border); max-width:440px">
+        <div class="form-group">
+          <label style="font-weight:700; margin-bottom:1rem; display:block" data-i18n="chooseLanguage">لغة الموقع / Language</label>
+          <select id="profile-lang-select" style="width:100%; padding:1.2rem; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--bg-1); color:var(--text-primary); font-family:inherit; font-size:1.45rem; font-weight:600; cursor:pointer;">
+            <option value="ar">العربية (AR)</option>
+            <option value="en">English (EN)</option>
+          </select>
+        </div>
+      </div>
     </div>
   </div>
 

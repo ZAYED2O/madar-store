@@ -97,6 +97,7 @@ const translations = {
     featuredHeading: 'منتجات مختارة', featuredSubheading: 'قطع يتم اختيارها بعناية لتناسب أسلوبك',
     collectionsHeading: 'المجموعات', collectionsSubheading: 'استكشف مجموعاتنا المنتقاة بعناية',
     ourStoryBtn: 'قصتنا', shopNowBtn: 'تسوق الآن', shopHeading: 'المتجر',
+    siteSettings: 'إعدادات الموقع', chooseLanguage: 'لغة الموقع / Language',
   },
   en: {
     navHome: 'Home', navShop: 'Shop', navAbout: 'About', navContact: 'Contact',
@@ -187,6 +188,7 @@ const translations = {
     featuredHeading: 'Featured Products', featuredSubheading: 'Hand-picked pieces curated for your style',
     collectionsHeading: 'Collections', collectionsSubheading: 'Explore our carefully curated collections',
     ourStoryBtn: 'Our Story', shopNowBtn: 'Shop Now', shopHeading: 'Shop',
+    siteSettings: 'Site Settings', chooseLanguage: 'Site Language',
   }
 };
 
@@ -973,6 +975,32 @@ async function loadProfileData() {
       const pointsDisplay = $('profile-points-display');
       if (pointsDisplay) {
         pointsDisplay.textContent = currentLang === 'ar' ? `${data.points || 0} نقطة` : `${data.points || 0} points`;
+      }
+
+      const langSelect = $('profile-lang-select');
+      if (langSelect) {
+        langSelect.value = currentLang;
+        langSelect.onchange = (e) => {
+          currentLang = e.target.value;
+          localStorage.setItem('madar_lang', currentLang);
+          applyTranslations();
+          if (currentRoute === 'shop') renderShopProducts();
+          else if (currentRoute === 'home') loadHomeProducts();
+          else if (currentRoute === 'admin') loadAdminData();
+          buildCategoryFilters();
+          renderCartDrawer();
+          renderWishlistDrawer();
+          loadProfileData();
+
+          const mainToggleBtn = $('lang-toggle-btn');
+          if (mainToggleBtn) {
+            mainToggleBtn.textContent = currentLang === 'ar' ? 'EN' : 'AR';
+          }
+          const mobileToggleBtn = $('mobile-lang-toggle');
+          if (mobileToggleBtn) {
+            mobileToggleBtn.textContent = currentLang === 'ar' ? 'EN' : 'AR';
+          }
+        };
       }
 
       // Show avatar image or initials

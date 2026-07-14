@@ -788,7 +788,7 @@ html[dir="rtl"] .toast-container { right:auto;left:2rem; }
   html { font-size: 56%; }
   .site-header { height: 60px; }
   .header-container { position: relative; }
-  .desktop-nav, .lang-toggle-btn { display: none; }
+  .desktop-nav, #lang-toggle-btn { display: none; }
   .mobile-menu-toggle { display: inline-flex; }
   .header-left { flex: 0 0 auto; position: relative; z-index: 2; }
   .header-right { flex: 0 0 auto; margin-left: auto; position: relative; z-index: 2; }
