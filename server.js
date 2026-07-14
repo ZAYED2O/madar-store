@@ -460,9 +460,8 @@ app.post('/api/contact', (req, res) => {
 });
 
 // ─── ORDERS: Create ───────────────────────────────────────────────────────────
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', verifyToken, (req, res) => {
   const { items, note, subtotal, shipping, total, customerName, customerPhone, customerAddress, customerCity, paymentMethod } = req.body;
-  const token = req.headers['x-auth-token'] || req.headers['authorization']?.replace('Bearer ', '');
   
   if (!items || !total) return res.status(400).json({ error: 'بيانات الطلب ناقصة' });
   if (!customerName || !customerPhone || !customerAddress || !customerCity) {
@@ -471,16 +470,7 @@ app.post('/api/orders', (req, res) => {
 
   const orderId = `MADAR-${Math.floor(10000 + Math.random() * 90000)}`;
   const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
-
-  let userId = null;
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      userId = decoded.id;
-    } catch (e) {
-      // Ignore invalid token, treat as guest
-    }
-  }
+  const userId = req.user.id;
 
   const saveOrder = (pm = 'cod') => {
     db.run(

@@ -759,19 +759,19 @@ function renderCartPage() {
 async function processCheckout() {
   if (cart.length === 0) { showToast(currentLang === 'ar' ? 'السلة فارغة' : 'Cart is empty', 'error'); return; }
   
-  // Pre-fill fields if user is logged in
-  if (currentUser) {
-    if ($('checkout-name')) $('checkout-name').value = currentUser.name || '';
-    if ($('checkout-phone')) $('checkout-phone').value = currentUser.phone || '';
-    if ($('checkout-address')) $('checkout-address').value = currentUser.address || '';
-    if ($('checkout-city')) $('checkout-city').value = currentUser.city || '';
-  } else {
-    // Clear fields for guest
-    if ($('checkout-name')) $('checkout-name').value = '';
-    if ($('checkout-phone')) $('checkout-phone').value = '';
-    if ($('checkout-address')) $('checkout-address').value = '';
-    if ($('checkout-city')) $('checkout-city').value = '';
+  // Require login/register to checkout
+  if (!currentUser) {
+    showToast(currentLang === 'ar' ? 'الرجاء تسجيل الدخول أو إنشاء حساب لإتمام الشراء' : 'Please log in or create an account to complete your purchase', 'error', 5000);
+    closeDrawer('cart-drawer');
+    openModal('account-modal');
+    return;
   }
+  
+  // Pre-fill fields if user is logged in
+  if ($('checkout-name')) $('checkout-name').value = currentUser.name || '';
+  if ($('checkout-phone')) $('checkout-phone').value = currentUser.phone || '';
+  if ($('checkout-address')) $('checkout-address').value = currentUser.address || '';
+  if ($('checkout-city')) $('checkout-city').value = currentUser.city || '';
   
   // Set the note in the form from the note field in the cart if any
   if ($('checkout-notes') && $('order-note-field')) {
