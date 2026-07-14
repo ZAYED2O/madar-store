@@ -1304,30 +1304,28 @@ function checkPasswordStrength(pass) {
 
 // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
 async function loadAdminData() {
-  try {
-    await loadAdminStats();
-  } catch(e) { console.error('Stats error:', e); }
-  try {
-    await loadAdminOrders();
-  } catch(e) { console.error('Orders error:', e); }
-  try {
-    await loadAdminProducts();
-  } catch(e) { console.error('Products error:', e); }
-  try {
-    await loadAdminUsers();
-  } catch(e) { console.error('Users error:', e); }
-  try {
-    await loadAdminCMS();
-  } catch(e) { console.error('CMS error:', e); }
-  try {
-    await loadAdminMessages();
-  } catch(e) { console.error('Messages error:', e); }
-  try {
-    await loadAdminAnnouncements();
-  } catch(e) { console.error('Announcements error:', e); }
-  try {
-    await loadAdminNotifications();
-  } catch(e) { console.error('Notifications error:', e); }
+  let loaded = 0;
+  const tasks = [
+    { name: 'Stats', fn: loadAdminStats },
+    { name: 'Orders', fn: loadAdminOrders },
+    { name: 'Products', fn: loadAdminProducts },
+    { name: 'Users', fn: loadAdminUsers },
+    { name: 'CMS', fn: loadAdminCMS },
+    { name: 'Messages', fn: loadAdminMessages },
+    { name: 'Announcements', fn: loadAdminAnnouncements },
+    { name: 'Notifications', fn: loadAdminNotifications },
+  ];
+  for (const task of tasks) {
+    try {
+      await task.fn();
+      loaded++;
+    } catch(e) {
+      console.error(`Admin ${task.name} error:`, e);
+    }
+  }
+  if (loaded === 0) {
+    showToast(currentLang === 'ar' ? 'فشل تحميل بيانات لوحة التحكم — حاول تسجيل الخروج وإعادة الدخول' : 'Failed to load admin data — try logging out and back in', 'error', 6000);
+  }
 }
 
 async function loadAdminStats() {
