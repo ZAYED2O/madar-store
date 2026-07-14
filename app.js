@@ -1304,7 +1304,30 @@ function checkPasswordStrength(pass) {
 
 // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
 async function loadAdminData() {
-  await Promise.all([loadAdminStats(), loadAdminOrders(), loadAdminProducts(), loadAdminUsers(), loadAdminCMS(), loadAdminMessages(), loadAdminAnnouncements(), loadAdminNotifications()]);
+  try {
+    await loadAdminStats();
+  } catch(e) { console.error('Stats error:', e); }
+  try {
+    await loadAdminOrders();
+  } catch(e) { console.error('Orders error:', e); }
+  try {
+    await loadAdminProducts();
+  } catch(e) { console.error('Products error:', e); }
+  try {
+    await loadAdminUsers();
+  } catch(e) { console.error('Users error:', e); }
+  try {
+    await loadAdminCMS();
+  } catch(e) { console.error('CMS error:', e); }
+  try {
+    await loadAdminMessages();
+  } catch(e) { console.error('Messages error:', e); }
+  try {
+    await loadAdminAnnouncements();
+  } catch(e) { console.error('Announcements error:', e); }
+  try {
+    await loadAdminNotifications();
+  } catch(e) { console.error('Notifications error:', e); }
 }
 
 async function loadAdminStats() {
@@ -1316,7 +1339,7 @@ async function loadAdminStats() {
     if ($('stat-orders')) $('stat-orders').textContent = s.totalOrders;
     if ($('stat-products')) $('stat-products').textContent = s.totalProducts;
     if ($('stat-customers')) $('stat-customers').textContent = s.totalCustomers;
-  } catch {}
+  } catch(e) { console.error('loadAdminStats failed:', e); }
 }
 
 async function loadAdminOrders() {
