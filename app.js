@@ -92,6 +92,11 @@ const translations = {
     passWeak: 'ضعيفة', passFair: 'مقبولة', passGood: 'جيدة', passStrong: 'قوية',
     orderStatusPending: 'قيد الانتظار', orderStatusPackaging: 'قيد التجهيز',
     orderStatusShipped: 'تم الشحن', orderStatusCancelled: 'ملغي',
+    contactTitle: 'تواصل معنا', contactEmail: 'hello@madar.com',
+    contactPhone: '01000000000', contactAddress: 'القاهرة، مصر',
+    featuredHeading: 'منتجات مختارة', featuredSubheading: 'قطع يتم اختيارها بعناية لتناسب أسلوبك',
+    collectionsHeading: 'المجموعات', collectionsSubheading: 'استكشف مجموعاتنا المنتقاة بعناية',
+    ourStoryBtn: 'قصتنا', shopNowBtn: 'تسوق الآن', shopHeading: 'المتجر',
   },
   en: {
     navHome: 'Home', navShop: 'Shop', navAbout: 'About', navContact: 'Contact',
@@ -175,9 +180,13 @@ const translations = {
     ann1: 'Free shipping on orders over 1500 EGP', ann2: 'New collections every season',
     ann3: 'Made in Egypt to the highest quality standards',
     logoMain: 'MADAR',
-    passWeak: 'Weak', passFair: 'Fair', passGood: 'Good', passStrong: 'Strong',
     orderStatusPending: 'Pending', orderStatusPackaging: 'Packaging',
     orderStatusShipped: 'Shipped', orderStatusCancelled: 'Cancelled',
+    contactTitle: 'Contact Us', contactEmail: 'hello@madar.com',
+    contactPhone: '01000000000', contactAddress: 'Cairo, Egypt',
+    featuredHeading: 'Featured Products', featuredSubheading: 'Hand-picked pieces curated for your style',
+    collectionsHeading: 'Collections', collectionsSubheading: 'Explore our carefully curated collections',
+    ourStoryBtn: 'Our Story', shopNowBtn: 'Shop Now', shopHeading: 'Shop',
   }
 };
 
