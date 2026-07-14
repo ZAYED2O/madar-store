@@ -566,6 +566,7 @@ html[dir="rtl"] .accordion-trigger { flex-direction: row-reverse; }
 .accordion-tab .accordion-content { font-size: 1.4rem; line-height: 1.6; color: var(--text-muted); }
 html[dir="rtl"] .accordion-tab .accordion-content { text-align: right; }
 .accordion-tab .accordion-content.show { max-height: 200px; padding-bottom: 1.4rem; }
+.accordion-tab .accordion-content-reviews.show { max-height: 1000px; padding-bottom: 1.4rem; }
 
 /* ─── WISHLIST ────────────────────────────────────────────────────────────── */
 .wishlist-items-container { display: flex; flex-direction: column; gap: 1.8rem; }
