@@ -394,7 +394,7 @@ app.post('/api/orders', (req, res) => {
 
   const saveOrder = (pm = 'cod') => {
     db.run(
-      'INSERT INTO orders (order_id,user_id,items,note,subtotal,shipping,total,customer_name,customer_phone,customer_address,customer_city,payment_method) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO orders (order_id,user_id,items,note,subtotal,shipping,total,customer_name,customer_phone,customer_address,customer_city,payment_method) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
       [orderId, userId, itemsStr, note, subtotal, shipping, total, customerName, customerPhone, customerAddress, customerCity, pm],
       function(err) {
         if (err) {
