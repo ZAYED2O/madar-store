@@ -274,7 +274,13 @@ function applyTranslations() {
   });
   // Logo
   const logoEl = $('logo-text');
-  if (logoEl) logoEl.textContent = currentLang === 'ar' ? 'مدار' : 'MADAR';
+  if (logoEl) {
+    if (translations[currentLang] && translations[currentLang]['siteLogo']) {
+      logoEl.textContent = translations[currentLang]['siteLogo'];
+    } else {
+      logoEl.textContent = currentLang === 'ar' ? 'مدار' : 'MADAR';
+    }
+  }
   // Lang toggle buttons
   $$('#lang-toggle-btn, #mobile-lang-toggle').forEach(b => b.textContent = currentLang === 'ar' ? 'EN' : 'عر');
   // Update nav active states
