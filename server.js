@@ -15,9 +15,14 @@ const PORT = process.env.PORT || 8080;
 const isVercel = !!process.env.VERCEL;
 
 // ─── DATABASE: Turso (cloud) or local SQLite ─────────────────────────────────
-const dbUrl = process.env.TURSO_DB_URL ||
+let dbUrl = process.env.TURSO_DB_URL ||
   'file:' + path.join(__dirname, 'dxlr.db').replace(/\\/g, '/');
-const dbToken = process.env.TURSO_DB_TOKEN;
+dbUrl = dbUrl.trim().replace(/^\uFEFF/, '').replace(/^['"]|['"]$/g, '');
+
+let dbToken = process.env.TURSO_DB_TOKEN;
+if (dbToken) {
+  dbToken = dbToken.trim().replace(/^\uFEFF/, '').replace(/^['"]|['"]$/g, '');
+}
 
 const client = createClient({ url: dbUrl, authToken: dbToken });
 
