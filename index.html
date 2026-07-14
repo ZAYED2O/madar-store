@@ -439,6 +439,7 @@
     <!-- Hero Banner -->
     <section class="hero-banner">
       <div class="hero-content">
+        <div class="hero-brand-title" id="hero-brand-title" data-i18n="siteLogo">مدار</div>
         <p class="hero-eyebrow" data-i18n="heroEyebrow">مجموعة 2025</p>
         <h1 class="hero-title"><span data-i18n="heroTitleLine1">اللبس الذي</span><br><span data-i18n="heroTitleLine2">يعبّر عنك</span></h1>
         <p class="hero-subtitle" data-i18n="heroSubtitle">ملابس مصممة للمطورين وعشاق التقنية والمبدعين — حيث الأناقة تلتقي بالهوية الرقمية</p>
@@ -651,6 +652,10 @@
           <p class="profile-user-email" id="profile-email-display">email@example.com</p>
           <span class="profile-role-badge role-customer" id="profile-role-badge" data-i18n="roleCustomer">عميل</span>
           <p class="profile-join-date" id="profile-join-date"></p>
+          <div class="profile-points-badge" id="profile-points-container" style="display:inline-flex;align-items:center;gap:0.6rem;background:var(--accent);color:#fff;padding:0.4rem 1rem;border-radius:var(--r-sm);font-size:1.3rem;font-weight:700;margin-top:0.8rem">
+            <i class="fa-solid fa-star" style="color:#f59e0b"></i>
+            <span id="profile-points-display">0 نقطة</span>
+          </div>
         </div>
         <button class="btn outline-btn btn-sm" id="logout-btn" style="margin-right:auto">
           <i class="fa-solid fa-right-from-bracket"></i> <span data-i18n="logout">تسجيل الخروج</span>
@@ -720,10 +725,11 @@
               <th data-i18n="items">المنتجات</th>
               <th data-i18n="total">الإجمالي</th>
               <th data-i18n="status">الحالة</th>
+              <th data-i18n="actions">الإجراءات</th>
             </tr>
           </thead>
           <tbody id="profile-orders-tbody">
-            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:3rem" data-i18n="noOrders">لا توجد طلبات بعد</td></tr>
+            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:3rem" data-i18n="noOrders">لا توجد طلبات بعد</td></tr>
           </tbody>
         </table>
       </div>

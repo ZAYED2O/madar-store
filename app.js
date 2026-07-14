@@ -242,6 +242,8 @@ function statusBadgeClass(s) {
   if (s === 'قيد التجهيز' || s === 'Packaging') return 'status-packaging';
   if (s === 'تم الشحن' || s === 'Shipped') return 'status-shipped';
   if (s === 'ملغي' || s === 'Cancelled') return 'status-cancelled';
+  if (s === 'طلب استرجاع') return 'status-pending';
+  if (s === 'تم الاسترجاع') return 'status-shipped';
   return 'status-pending';
 }
 
@@ -955,6 +957,10 @@ async function loadProfileData() {
       if ($('prof-address')) $('prof-address').value = data.address || '';
       if ($('prof-avatar-url')) $('prof-avatar-url').value = data.avatar_url || '';
       if (joinDate) joinDate.textContent = `${currentLang === 'ar' ? 'عضو منذ' : 'Member since'} ${formatDate(data.created_at)}`;
+      const pointsDisplay = $('profile-points-display');
+      if (pointsDisplay) {
+        pointsDisplay.textContent = currentLang === 'ar' ? `${data.points || 0} نقطة` : `${data.points || 0} points`;
+      }
 
       // Show avatar image or initials
       updateProfileAvatar(data.avatar_url, data.avatar_initials || data.name.charAt(0));
@@ -990,21 +996,60 @@ async function loadProfileOrders() {
     const tbody = $('profile-orders-tbody');
     if (!tbody) return;
     if (!orders.length) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:3rem">${t('noOrders')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:3rem">${t('noOrders')}</td></tr>`;
       return;
     }
     tbody.innerHTML = '';
     orders.forEach(o => {
       const itemCount = Array.isArray(o.items) ? o.items.reduce((a, i) => a + i.qty, 0) : '—';
       const tr = document.createElement('tr');
+      
+      let actionHtml = '—';
+      if (o.status === 'تم الشحن' || o.status === 'Shipped') {
+        actionHtml = `<button class="btn primary-btn btn-xs return-order-btn" style="padding:0.4rem 1rem;font-size:1.15rem" data-id="${o.id}">${currentLang === 'ar' ? 'استرجاع المنتج' : 'Return Order'}</button>`;
+      } else if (o.status === 'طلب استرجاع') {
+        actionHtml = `<span style="color:var(--gold);font-weight:700;font-size:1.25rem">${currentLang === 'ar' ? 'انتظار المراجعة' : 'Return Pending'}</span>`;
+      } else if (o.status === 'تم الاسترجاع') {
+        actionHtml = `<span style="color:var(--green);font-weight:700;font-size:1.25rem">${currentLang === 'ar' ? 'تم الاسترجاع (+نقاط)' : 'Returned (+Points)'}</span>`;
+      }
+
       tr.innerHTML = `
         <td style="font-weight:700;color:var(--accent)">${o.order_id}</td>
         <td>${formatDate(o.created_at)}</td>
         <td>${itemCount} ${currentLang === 'ar' ? 'قطعة' : 'items'}</td>
         <td style="color:var(--cyan);font-weight:800">${formatCurrency(o.total)}</td>
         <td><span class="status-badge ${statusBadgeClass(o.status)}">${o.status}</span></td>
+        <td>${actionHtml}</td>
       `;
       tbody.appendChild(tr);
+    });
+
+    // Attach return click handlers
+    tbody.querySelectorAll('.return-order-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const orderDbId = btn.getAttribute('data-id');
+        if (!confirm(currentLang === 'ar' ? 'هل أنت متأكد من رغبتك في استرجاع هذا الطلب؟ سيتم قيد المبلغ كنقاط في حسابك فور موافقة الإدارة.' : 'Are you sure you want to return this order? The amount will be added to your points balance upon admin approval.')) return;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+          const retRes = await apiFetch(`/api/profile/orders/${orderDbId}/return`, { method: 'POST' });
+          if (!retRes) return;
+          const retData = await retRes.json();
+          if (retData.success) {
+            showToast(currentLang === 'ar' ? 'تم تقديم طلب الاسترجاع بنجاح ✓' : 'Return request submitted successfully ✓');
+            loadProfileData(); // Reload profile and orders
+          } else {
+            showToast(retData.error || 'Request failed', 'error');
+            btn.disabled = false;
+            btn.textContent = currentLang === 'ar' ? 'استرجاع المنتج' : 'Return Order';
+          }
+        } catch {
+          showToast(currentLang === 'ar' ? 'خطأ في الاتصال' : 'Connection error', 'error');
+          btn.disabled = false;
+          btn.textContent = currentLang === 'ar' ? 'استرجاع المنتج' : 'Return Order';
+        }
+      });
     });
   } catch {}
 }
@@ -1183,7 +1228,7 @@ async function loadAdminOrders() {
     const tbody = $('admin-orders-tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
-    const statusOptions = ['قيد الانتظار','قيد التجهيز','تم الشحن','ملغي'];
+    const statusOptions = ['قيد الانتظار','قيد التجهيز','تم الشحن','ملغي','طلب استرجاع','تم الاسترجاع'];
 
     if (!orders.length) {
       tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:3rem">${currentLang === 'ar' ? 'لا توجد طلبات' : 'No orders yet'}</td></tr>`;

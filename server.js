@@ -59,6 +59,7 @@ const db = {
 
 // Ensure new columns exist (errors silently ignored if column already exists)
 ['ALTER TABLE users ADD COLUMN avatar_url TEXT',
+ 'ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0',
  'ALTER TABLE orders ADD COLUMN customer_name TEXT',
  'ALTER TABLE orders ADD COLUMN customer_phone TEXT',
  'ALTER TABLE orders ADD COLUMN customer_address TEXT',
@@ -205,7 +206,7 @@ app.post('/api/register', async (req, res) => {
           { expiresIn: '7d' }
         );
 
-        res.status(201).json({ success: true, token, user: { id: this.lastID, name, email, role, avatarInitials: initials, avatarUrl: null } });
+        res.status(201).json({ success: true, token, user: { id: this.lastID, name, email, role, avatarInitials: initials, avatarUrl: null, points: 0 } });
       });
   });
 });
@@ -229,7 +230,7 @@ app.post('/api/login', (req, res) => {
 
     res.json({
       success: true, token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarInitials: user.avatar_initials || user.name.charAt(0), avatarUrl: user.avatar_url || null, phone: user.phone, address: user.address }
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarInitials: user.avatar_initials || user.name.charAt(0), avatarUrl: user.avatar_url || null, phone: user.phone, address: user.address, points: user.points || 0 }
     });
   });
 });
@@ -241,7 +242,7 @@ app.post('/api/logout', verifyToken, (req, res) => {
 
 // ─── USER: Get Profile ────────────────────────────────────────────────────────
 app.get('/api/profile', verifyToken, (req, res) => {
-  db.get('SELECT id,name,email,role,avatar_initials,avatar_url,phone,address,created_at FROM users WHERE id = ?',
+  db.get('SELECT id,name,email,role,avatar_initials,avatar_url,phone,address,points,created_at FROM users WHERE id = ?',
     [req.user.id], (err, user) => {
       if (err || !user) return res.status(404).json({ error: 'المستخدم غير موجود' });
       res.json(user);
@@ -305,6 +306,20 @@ app.get('/api/profile/orders', verifyToken, (req, res) => {
   db.all('SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC', [req.user.id], (err, rows) => {
     if (err) return res.status(500).json({ error: 'خطأ في جلب الطلبات' });
     res.json(rows.map(r => { try { r.items = JSON.parse(r.items); } catch {} return r; }));
+  });
+});
+
+// ─── USER: Request Order Return ────────────────────────────────────────────────
+app.post('/api/profile/orders/:id/return', verifyToken, (req, res) => {
+  db.get('SELECT * FROM orders WHERE id = ? AND user_id = ?', [req.params.id, req.user.id], (err, order) => {
+    if (err || !order) return res.status(404).json({ error: 'الطلب غير موجود' });
+    if (order.status !== 'تم الشحن' && order.status !== 'Shipped') {
+      return res.status(400).json({ error: 'لا يمكن تقديم طلب استرجاع إلا للطلبات المشحونة فقط' });
+    }
+    db.run('UPDATE orders SET status = ? WHERE id = ?', ['طلب استرجاع', req.params.id], function(err) {
+      if (err) return res.status(500).json({ error: 'خطأ في تقديم طلب الاسترجاع' });
+      res.json({ success: true, status: 'طلب استرجاع' });
+    });
   });
 });
 
@@ -402,10 +417,34 @@ app.get('/api/admin/orders', verifyToken, requireAdmin, (req, res) => {
 app.put('/api/admin/orders/:id', verifyToken, requireAdmin, (req, res) => {
   const { status } = req.body;
   if (!status) return res.status(400).json({ error: 'الحالة مطلوبة' });
-  db.run('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: 'خطأ في تحديث الحالة' });
-    res.json({ success: true });
-  });
+
+  if (status === 'تم الاسترجاع') {
+    db.get('SELECT user_id, total, status FROM orders WHERE id = ?', [req.params.id], (err, order) => {
+      if (err || !order) return res.status(404).json({ error: 'الطلب غير موجود' });
+      if (order.status === 'تم الاسترجاع') {
+        return res.status(400).json({ error: 'هذا الطلب تم استرجاعه بالفعل' });
+      }
+
+      const pointsToEarn = Math.floor(order.total);
+      db.run('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: 'خطأ في تحديث الحالة' });
+
+        if (order.user_id) {
+          db.run('UPDATE users SET points = COALESCE(points, 0) + ? WHERE id = ?', [pointsToEarn, order.user_id], function(err) {
+            if (err) console.error('Failed to credit points:', err.message);
+            res.json({ success: true, pointsCredited: pointsToEarn });
+          });
+        } else {
+          res.json({ success: true, message: 'تم التحديث بنجاح (طلب زائر بدون حساب)' });
+        }
+      });
+    });
+  } else {
+    db.run('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id], function(err) {
+      if (err) return res.status(500).json({ error: 'خطأ في تحديث الحالة' });
+      res.json({ success: true });
+    });
+  }
 });
 
 // ─── ADMIN: Products CRUD ─────────────────────────────────────────────────────

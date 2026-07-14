@@ -181,14 +181,8 @@ html[dir="rtl"] .header-right { justify-content: flex-start; flex-direction: row
 html[dir="rtl"] .logo-text { font-family: var(--font-ar); letter-spacing: 0.02em; }
 .logo-link { display: flex; flex-direction: column; align-items: center; gap: 0; text-decoration: none; }
 .logo-brand-name {
-  font-family: var(--font-heading); font-size: 1.8rem; font-weight: 900;
-  letter-spacing: 0.4em; color: var(--text-primary); text-transform: uppercase;
-  line-height: 1; transition: opacity var(--t-fast);
-  background: linear-gradient(135deg, var(--accent), var(--cyan));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  margin-top: -0.8rem;
+  display: none;
 }
-.logo-link:hover .logo-brand-name { opacity: 0.8; }
 .logo-link:hover .logo-text { color: var(--accent); }
 .logo-img { mix-blend-mode: multiply; }
 
@@ -247,8 +241,23 @@ html[dir="rtl"] .modal-close { right:auto;left:1.6rem; }
 .hero-banner {
   height: calc(100vh - var(--header-h) - var(--ann-h)); min-height: 580px;
   position: relative; display: flex; align-items: center;
-  background: linear-gradient(135deg, var(--bg-0) 0%, var(--bg-1) 50%, var(--bg-2) 100%);
+  background: var(--bg-1);
   overflow: hidden;
+}
+.hero-brand-title {
+  font-family: var(--font-heading);
+  font-size: 4rem;
+  font-weight: 900;
+  letter-spacing: 0.35em;
+  color: var(--accent);
+  margin-bottom: 1.6rem;
+  text-transform: uppercase;
+  line-height: 1;
+}
+html[dir="rtl"] .hero-brand-title {
+  font-family: var(--font-ar);
+  font-size: 3.5rem;
+  letter-spacing: 0.05em;
 }
 .hero-banner::before {
   content: ''; position: absolute; inset: 0;
