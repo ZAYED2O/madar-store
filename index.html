@@ -71,8 +71,9 @@
         <i class="fa-solid fa-bag-shopping"></i>
         <span class="badge-count hidden" id="cart-count-badge">0</span>
       </button>
-      <button class="icon-btn hidden" id="admin-panel-btn" aria-label="لوحة التحكم" title="لوحة التحكم">
+      <button class="icon-btn hidden" id="admin-panel-btn" aria-label="لوحة التحكم" title="لوحة التحكم" style="position:relative">
         <i class="fa-solid fa-screwdriver-wrench"></i>
+        <span id="header-admin-notif-dot" style="position:absolute;top:2px;right:2px;width:8px;height:8px;background:var(--red);border-radius:50%;display:none"></span>
       </button>
     </div>
   </div>
@@ -817,6 +818,10 @@
         <button class="admin-tab-btn" data-admin-tab="cms" data-i18n="manageContent">محتوى الموقع</button>
         <button class="admin-tab-btn" data-admin-tab="announcements" data-i18n="manageAnnouncements">شريط الإعلانات</button>
         <button class="admin-tab-btn" data-admin-tab="messages" data-i18n="manageMessages">الرسائل</button>
+        <button class="admin-tab-btn" data-admin-tab="notifications" style="position:relative">
+          <span data-i18n="manageNotifications">الإشعارات</span>
+          <span id="tab-admin-notif-dot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:var(--red);border-radius:50%;display:none"></span>
+        </button>
       </div>
 
       <!-- ORDERS TAB -->
@@ -1047,6 +1052,28 @@
             </thead>
             <tbody id="admin-messages-tbody">
               <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS TAB -->
+      <div id="admin-tab-notifications" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+          <h2 class="panel-title" style="margin:0" data-i18n="manageNotifications">الإشعارات الواردة</h2>
+          <button class="btn secondary-btn btn-sm" id="admin-clear-notifs-btn">${currentLang === 'ar' ? 'تحديد الكل كمقروء' : 'Mark all as read'}</button>
+        </div>
+        <div class="admin-table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width:60%">الإشعار</th>
+                <th>التاريخ</th>
+                <th>الإجراء</th>
+              </tr>
+            </thead>
+            <tbody id="admin-notifs-tbody">
+              <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
             </tbody>
           </table>
         </div>

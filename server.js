@@ -66,6 +66,19 @@ const db = {
  'ALTER TABLE orders ADD COLUMN customer_city TEXT',
 ].forEach(sql => client.execute(sql).catch(() => {}));
 
+// Ensure notifications table exists
+client.execute(`CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL,
+  title_ar TEXT NOT NULL,
+  title_en TEXT NOT NULL,
+  message_ar TEXT NOT NULL,
+  message_en TEXT NOT NULL,
+  target_id TEXT,
+  is_read INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`).catch(() => {});
+
 console.log('Connected to:', dbUrl.startsWith('file:') ? 'Local SQLite' : 'Turso Cloud DB');
 
 app.use(cors());
@@ -318,6 +331,19 @@ app.post('/api/profile/orders/:id/return', verifyToken, (req, res) => {
     }
     db.run('UPDATE orders SET status = ? WHERE id = ?', ['طلب استرجاع', req.params.id], function(err) {
       if (err) return res.status(500).json({ error: 'خطأ في تقديم طلب الاسترجاع' });
+
+      // Insert admin notification
+      const customerName = order.customer_name || req.user.name;
+      const titleAr = 'طلب استرجاع جديد';
+      const titleEn = 'New Return Request';
+      const msgAr = `قام العميل ${customerName} بطلب استرجاع للطلب رقم ${order.order_id}`;
+      const msgEn = `Customer ${customerName} requested a return for order #${order.order_id}`;
+      
+      db.run('INSERT INTO notifications (type, title_ar, title_en, message_ar, message_en, target_id) VALUES (?,?,?,?,?,?)',
+        ['return_request', titleAr, titleEn, msgAr, msgEn, order.order_id], function(err) {
+          if (err) console.error('Failed to create notification:', err.message);
+        });
+
       res.json({ success: true, status: 'طلب استرجاع' });
     });
   });
@@ -591,6 +617,35 @@ app.put('/api/admin/announcements/:id', verifyToken, requireAdmin, (req, res) =>
 app.delete('/api/admin/announcements/:id', verifyToken, requireAdmin, (req, res) => {
   db.run('DELETE FROM announcements WHERE id = ?', [req.params.id], function(err) {
     if (err) return res.status(500).json({ error: 'خطأ في حذف الإعلان' });
+    res.json({ success: true });
+  });
+});
+
+// ─── ADMIN: Notifications ─────────────────────────────────────────────────────
+app.get('/api/admin/notifications', verifyToken, requireAdmin, (req, res) => {
+  db.all('SELECT * FROM notifications ORDER BY id DESC', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'خطأ في جلب الإشعارات' });
+    res.json(rows);
+  });
+});
+
+app.get('/api/admin/notifications/unread-count', verifyToken, requireAdmin, (req, res) => {
+  db.get('SELECT COUNT(*) as cnt FROM notifications WHERE is_read = 0', [], (err, row) => {
+    if (err) return res.status(500).json({ error: 'خطأ في جلب عدد الإشعارات' });
+    res.json({ count: row ? row.cnt : 0 });
+  });
+});
+
+app.put('/api/admin/notifications/:id/read', verifyToken, requireAdmin, (req, res) => {
+  db.run('UPDATE notifications SET is_read = 1 WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: 'خطأ في تحديث حالة الإشعار' });
+    res.json({ success: true });
+  });
+});
+
+app.put('/api/admin/notifications/read-all', verifyToken, requireAdmin, (req, res) => {
+  db.run('UPDATE notifications SET is_read = 1', [], function(err) {
+    if (err) return res.status(500).json({ error: 'خطأ في تحديث الإشعارات' });
     res.json({ success: true });
   });
 });

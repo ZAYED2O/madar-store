@@ -859,7 +859,11 @@ async function handleLogin() {
       closeModal('account-modal');
       updateAuthUI();
       showToast(currentLang === 'ar' ? `مرحباً ${data.user.name} 👋` : `Welcome ${data.user.name} 👋`);
-      if (data.user.role === 'admin') navigate('admin');
+      if (data.user.role === 'admin') {
+        navigate('admin');
+        checkUnreadNotifications();
+        setInterval(checkUnreadNotifications, 30000);
+      }
     } else {
       showToast(data.error || 'Login failed', 'error');
     }
@@ -1205,7 +1209,7 @@ function checkPasswordStrength(pass) {
 
 // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
 async function loadAdminData() {
-  await Promise.all([loadAdminStats(), loadAdminOrders(), loadAdminProducts(), loadAdminUsers(), loadAdminCMS(), loadAdminMessages(), loadAdminAnnouncements()]);
+  await Promise.all([loadAdminStats(), loadAdminOrders(), loadAdminProducts(), loadAdminUsers(), loadAdminCMS(), loadAdminMessages(), loadAdminAnnouncements(), loadAdminNotifications()]);
 }
 
 async function loadAdminStats() {
@@ -1721,6 +1725,130 @@ async function submitReply() {
   }
 }
 
+// ─── ADMIN: Notifications ─────────────────────────────────────────────────────
+async function checkUnreadNotifications() {
+  if (!currentUser || currentUser.role !== 'admin' || !authToken) return;
+  try {
+    const res = await apiFetch('/api/admin/notifications/unread-count');
+    if (!res) return;
+    const data = await res.json();
+    const count = data.count || 0;
+    
+    const headerDot = $('header-admin-notif-dot');
+    const tabDot = $('tab-admin-notif-dot');
+    
+    if (headerDot) headerDot.style.display = count > 0 ? 'block' : 'none';
+    if (tabDot) tabDot.style.display = count > 0 ? 'block' : 'none';
+  } catch (err) {
+    console.error('Error checking unread notifications:', err);
+  }
+}
+
+async function loadAdminNotifications() {
+  try {
+    const res = await apiFetch('/api/admin/notifications');
+    if (!res) return;
+    const notifs = await res.json();
+    const tbody = $('admin-notifs-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!Array.isArray(notifs)) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--red);padding:3rem">Failed to load notifications</td></tr>`;
+      return;
+    }
+
+    if (!notifs.length) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:3rem">${currentLang === 'ar' ? 'لا توجد إشعارات حالياً' : 'No notifications yet'}</td></tr>`;
+      return;
+    }
+
+    notifs.forEach(n => {
+      const title = currentLang === 'ar' ? n.title_ar : n.title_en;
+      const msg = currentLang === 'ar' ? n.message_ar : n.message_en;
+      const date = formatDate(n.created_at);
+      
+      const tr = document.createElement('tr');
+      if (n.is_read === 0) {
+        tr.style.background = 'rgba(75,63,53,0.04)';
+      }
+      
+      tr.innerHTML = `
+        <td>
+          <div style="font-weight:700;color:var(--accent);font-size:1.4rem;display:flex;align-items:center;gap:0.8rem">
+            ${n.is_read === 0 ? '<span style="width:6px;height:6px;background:var(--red);border-radius:50%"></span>' : ''}
+            ${title}
+          </div>
+          <div style="font-size:1.3rem;color:var(--text-muted);margin-top:0.4rem">${msg}</div>
+        </td>
+        <td style="font-size:1.25rem">${date}</td>
+        <td>
+          <div style="display:flex;gap:0.8rem">
+            <button class="btn primary-btn btn-sm view-notif-btn" data-target="${n.target_id || ''}" data-id="${n.id}">
+              ${currentLang === 'ar' ? 'عرض الطلب' : 'View Order'}
+            </button>
+            ${n.is_read === 0 ? `
+              <button class="btn secondary-btn btn-sm read-notif-btn" data-id="${n.id}">
+                ${currentLang === 'ar' ? 'مقروء' : 'Read'}
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Attach button listeners
+    tbody.querySelectorAll('.read-notif-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        btn.disabled = true;
+        await apiFetch(`/api/admin/notifications/${id}/read`, { method: 'PUT' });
+        loadAdminNotifications();
+        checkUnreadNotifications();
+      });
+    });
+
+    tbody.querySelectorAll('.view-notif-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const target = btn.getAttribute('data-target');
+        // Mark as read first
+        await apiFetch(`/api/admin/notifications/${id}/read`, { method: 'PUT' });
+        
+        // Switch to Orders tab
+        const ordersTabBtn = document.querySelector('[data-admin-tab="orders"]');
+        if (ordersTabBtn) ordersTabBtn.click();
+        
+        // Highlight or filter by that order_id
+        const orderSearchInput = $('admin-order-search') || document.querySelector('.admin-orders-table input') || null;
+        if (orderSearchInput) {
+          orderSearchInput.value = target;
+          orderSearchInput.dispatchEvent(new Event('input'));
+        }
+        
+        checkUnreadNotifications();
+      });
+    });
+
+  } catch (err) {
+    console.error('Failed to load notifications:', err);
+  }
+}
+
+async function markAllNotificationsRead() {
+  try {
+    const res = await apiFetch('/api/admin/notifications/read-all', { method: 'PUT' });
+    if (!res) return;
+    const data = await res.json();
+    if (data.success) {
+      loadAdminNotifications();
+      checkUnreadNotifications();
+      showToast(currentLang === 'ar' ? 'تم تحديد الكل كمقروء' : 'All marked as read');
+    }
+  } catch {}
+}
+
 async function uploadImageFile(fileInput, textInput, labelElement) {
   const file = fileInput.files[0];
   if (!file) return;
@@ -1876,7 +2004,6 @@ function setupCollectionCards() {
   });
 }
 
-// ─── ADMIN TABS ───────────────────────────────────────────────────────────────
 function setupAdminTabs() {
   $$('.admin-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1885,8 +2012,12 @@ function setupAdminTabs() {
       const tab = btn.dataset.adminTab;
       $$('[id^="admin-tab-"]').forEach(p => p.classList.add('hidden'));
       $(`admin-tab-${tab}`)?.classList.remove('hidden');
+      if (tab === 'notifications') {
+        loadAdminNotifications();
+      }
     });
   });
+  $('admin-clear-notifs-btn')?.addEventListener('click', markAllNotificationsRead);
 }
 
 // ─── PROFILE TABS ─────────────────────────────────────────────────────────────
@@ -1983,7 +2114,13 @@ async function init() {
   navigate(hash);
 
   // Auth state
-  if (authToken && currentUser) updateAuthUI();
+  if (authToken && currentUser) {
+    updateAuthUI();
+    if (currentUser.role === 'admin') {
+      checkUnreadNotifications();
+      setInterval(checkUnreadNotifications, 30000); // Check every 30s
+    }
+  }
 
   // ── Header Actions ──
   $('lang-toggle-btn')?.addEventListener('click', () => {
