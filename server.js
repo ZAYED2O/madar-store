@@ -401,6 +401,15 @@ app.post('/api/orders', (req, res) => {
           console.error('Error saving order:', err.message);
           return res.status(500).json({ error: 'خطأ في حفظ الطلب' });
         }
+        
+        // Auto-update user's profile with phone and address if not already set
+        if (userId) {
+          db.run(
+            'UPDATE users SET phone = COALESCE(phone, ?), address = COALESCE(address, ?) WHERE id = ? AND (phone IS NULL OR address IS NULL)',
+            [customerPhone, customerCity + ' - ' + customerAddress, userId]
+          );
+        }
+
         res.status(201).json({ success: true, orderId, dbRowId: this.lastID, total });
       }
     );
