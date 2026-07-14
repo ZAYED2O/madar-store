@@ -97,8 +97,14 @@ const translations = {
     featuredHeading: 'منتجات مختارة', featuredSubheading: 'قطع يتم اختيارها بعناية لتناسب أسلوبك',
     collectionsHeading: 'المجموعات', collectionsSubheading: 'استكشف مجموعاتنا المنتقاة بعناية',
     ourStoryBtn: 'قصتنا', shopNowBtn: 'تسوق الآن', shopHeading: 'المتجر',
-    siteSettings: 'إعدادات الموقع', chooseLanguage: 'لغة الموقع / Language',
     paymentMethod: 'طريقة الدفع', payCod: 'الدفع عند الاستلام', payPoints: 'الشراء بالنقاط',
+    reviewsTab: 'التقييمات والآراء',
+    addReviewTitle: 'أضف تقييمك',
+    ratingLabel: 'التقييم:',
+    reviewCommentLabel: 'التعليق:',
+    submitReviewBtn: 'إرسال التقييم',
+    loginToReview: 'الرجاء تسجيل الدخول لإضافة تقييمك',
+    noReviewsYet: 'لا توجد تقييمات لهذا المنتج بعد. كن أول من يقيّم!',
   },
   en: {
     navHome: 'Home', navShop: 'Shop', navAbout: 'About', navContact: 'Contact',
@@ -189,8 +195,14 @@ const translations = {
     featuredHeading: 'Featured Products', featuredSubheading: 'Hand-picked pieces curated for your style',
     collectionsHeading: 'Collections', collectionsSubheading: 'Explore our carefully curated collections',
     ourStoryBtn: 'Our Story', shopNowBtn: 'Shop Now', shopHeading: 'Shop',
-    siteSettings: 'Site Settings', chooseLanguage: 'Site Language',
     paymentMethod: 'Payment Method', payCod: 'Cash on Delivery', payPoints: 'Pay with Points',
+    reviewsTab: 'Reviews & Ratings',
+    addReviewTitle: 'Add Your Review',
+    ratingLabel: 'Rating:',
+    reviewCommentLabel: 'Comment:',
+    submitReviewBtn: 'Submit Review',
+    loginToReview: 'Please login to write a review',
+    noReviewsYet: 'No reviews for this product yet. Be the first to review!',
   }
 };
 
@@ -541,8 +553,72 @@ function openProductModal(p) {
   wishBtn.textContent = t(inWishlist ? 'removeFromWishlist' : 'addToWishlist');
 
   $('modal-qty-input').value = 1;
+  loadProductReviews(p.id);
   openModal('product-modal');
 }
+
+async function loadProductReviews(productId) {
+  const list = $('product-reviews-list');
+  if (!list) return;
+  list.innerHTML = `<div style="text-align:center;padding:1rem;"><i class="fa-solid fa-spinner fa-spin"></i></div>`;
+
+  // Reset/setup review form visibility based on login state
+  const authWarning = $('review-form-auth-warning');
+  const formContainer = $('add-review-form-container');
+  if (currentUser) {
+    if (authWarning) authWarning.classList.add('hidden');
+    if (formContainer) formContainer.classList.remove('hidden');
+    // Reset form fields
+    if ($('rf-comment')) $('rf-comment').value = '';
+    if ($('rf-rating')) $('rf-rating').value = '5';
+    resetReviewStarsInput();
+  } else {
+    if (authWarning) authWarning.classList.remove('hidden');
+    if (formContainer) formContainer.classList.add('hidden');
+  }
+
+  try {
+    const res = await fetch(`/api/products/${productId}/reviews?t=${Date.now()}`);
+    if (!res.ok) throw new Error('Failed to fetch');
+    const reviews = await res.json();
+    list.innerHTML = '';
+    
+    if (reviews.length === 0) {
+      list.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:1.3rem;">${t('noReviewsYet')}</div>`;
+      return;
+    }
+    
+    reviews.forEach(r => {
+      const date = new Date(r.created_at).toLocaleDateString(currentLang === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      const item = document.createElement('div');
+      item.style.cssText = 'padding:1rem;background:var(--bg-1);border-radius:var(--r-sm);border:1px solid var(--border);';
+      
+      const ratingStars = '★'.repeat(Math.round(r.rating)) + '☆'.repeat(5 - Math.round(r.rating));
+      
+      item.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;font-size:1.2rem;">
+          <strong style="color:var(--text-primary);">${r.user_name}</strong>
+          <span style="color:var(--text-muted);">${date}</span>
+        </div>
+        <div style="color:#f59e0b;font-size:1.3rem;margin-bottom:0.4rem;">${ratingStars}</div>
+        <p style="font-size:1.25rem;color:var(--text-muted);margin:0;line-height:1.4;">${r.comment}</p>
+      `;
+      list.appendChild(item);
+    });
+  } catch (err) {
+    console.error('Error loading reviews:', err);
+    list.innerHTML = `<div style="text-align:center;color:var(--red);padding:1rem;">Error loading reviews</div>`;
+  }
+}
+
+// Reset interactive stars to 5 stars
+function resetReviewStarsInput() {
+  const starsInput = $$('#rating-stars-input i');
+  starsInput.forEach((star, index) => {
+    star.className = 'fa-solid fa-star';
+  });
+}
+
 
 // ─── CART SYSTEM ──────────────────────────────────────────────────────────────
 function addToCart(product, size, qty = 1) {
@@ -2399,12 +2475,101 @@ async function init() {
   setupAccountTabs();
   setupContactForm();
   setupNewsletter();
+  setupProductReviews();
 
   // Initialize badges
   renderCartBadge();
   renderWishlistBadge();
 }
 
+function setupProductReviews() {
+  const starsInput = $$('#rating-stars-input i');
+  starsInput.forEach((star, index) => {
+    star.addEventListener('click', () => {
+      const rating = index + 1;
+      $('rf-rating').value = rating;
+      starsInput.forEach((s, idx) => {
+        if (idx < rating) {
+          s.className = 'fa-solid fa-star';
+        } else {
+          s.className = 'fa-regular fa-star';
+        }
+      });
+    });
+  });
+
+  $('add-review-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!currentUser) {
+      showToast(currentLang === 'ar' ? 'الرجاء تسجيل الدخول أولاً' : 'Please login first', 'error');
+      return;
+    }
+    if (!currentModalProduct) return;
+
+    const rating = parseFloat($('rf-rating').value);
+    const comment = $('rf-comment').value.trim();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    }
+
+    try {
+      const res = await apiFetch(`/api/products/${currentModalProduct.id}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify({ rating, comment })
+      });
+      if (!res) return;
+      const data = await res.json();
+      if (data.success) {
+        showToast(currentLang === 'ar' ? 'تم إضافة تقييمك بنجاح ✓' : 'Review submitted successfully ✓');
+        $('rf-comment').value = '';
+        $('rf-rating').value = '5';
+        resetReviewStarsInput();
+        
+        // Reload reviews list
+        loadProductReviews(currentModalProduct.id);
+        
+        // Refresh product rating stats in the modal
+        // Fetch updated product info
+        const prodRes = await fetch(`/api/products/${currentModalProduct.id}`);
+        if (prodRes.ok) {
+          const updatedProd = await prodRes.json();
+          // Update local product cache if exists
+          const index = products.findIndex(p => p.id === updatedProd.id);
+          if (index !== -1) {
+            products[index].rating = updatedProd.rating;
+            products[index].reviewsCount = updatedProd.reviewsCount;
+          }
+          // Update UI
+          const newStars = Math.round(updatedProd.rating);
+          $('modal-stars').innerHTML = '★'.repeat(newStars) + '☆'.repeat(5 - newStars);
+          $('modal-reviews').textContent = `(${updatedProd.reviewsCount} ${currentLang === 'ar' ? 'تقييم' : 'reviews'})`;
+          
+          // Re-render shop page if visible
+          if (currentRoute === 'shop') {
+            renderShopProducts();
+          } else if (currentRoute === 'home') {
+            loadHomeProducts();
+          }
+        }
+      } else {
+        showToast(data.error || 'Failed to submit review', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(currentLang === 'ar' ? 'حدث خطأ غير متوقع' : 'An error occurred', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = currentLang === 'ar' ? 'إرسال التقييم' : 'Submit Review';
+      }
+    }
+  });
+}
+
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
 else init();
+

@@ -115,6 +115,17 @@ db.serialize(async () => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`, err => { if (!err) console.log('✓ جدول رسائل التواصل'); });
 
+  // 7. Reviews Table
+  db.run(`CREATE TABLE IF NOT EXISTS reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    user_id INTEGER,
+    user_name TEXT NOT NULL,
+    rating REAL NOT NULL,
+    comment TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, err => { if (!err) console.log('✓ جدول التقييمات'); });
+
   // ─── Seed Products ───────────────────────────────────────────────────────
   const products = [
     { name_en:"Minimalist Waffle Knit T-Shirt", name_ar:"تيشرت محبوك وافل بسيط", handle:"waffle-knit-tshirt", price:490, original_price:650, category_en:"T-Shirts", category_ar:"تيشرتات", badge_en:"Sale 25%", badge_ar:"خصم ٢٥٪", image_primary:"assets/waffle_shirt_1.png", image_secondary:"assets/waffle_shirt_2.png", sizes:'["M","L","XL","2XL"]', low_stock:1, rating:4.9, reviews_count:38, description_en:"Premium waffle texture fabric, breathable and structured.", description_ar:"قماش وافل فاخر مسامي ومهيكل." },
@@ -212,6 +223,35 @@ db.serialize(async () => {
   insertMessage.run('أحمد علي', 'ahmed@gmail.com', 'استفسار عن المقاسات', 'هل يتوفر مقاس 3XL للتيشرتات قريباً؟');
   insertMessage.run('سارة محمود', 'sara@outlook.com', 'تأخير في التوصيل', 'مرحباً، طلبت منذ 5 أيام ولم يصلني الطلب بعد. رقم الطلب MADAR-12492');
   insertMessage.finalize(() => console.log('✓ تم زرع رسائل تواصل تجريبية'));
+
+  // Seed Reviews
+  const starterReviews = [
+    { product_id: 1, user_name: 'أحمد محمود', rating: 5.0, comment: 'خامة الوافل ممتازة ومريحة جداً في اللبس.' },
+    { product_id: 1, user_name: 'Sarah K.', rating: 4.0, comment: 'Very nice structure and breathable. Recommend it.' },
+    { product_id: 2, user_name: 'كريم خالد', rating: 5.0, comment: 'البنطلون تقيل ومناسب جداً للشتا والجيوب بسوستة عملية جداً.' },
+    { product_id: 3, user_name: 'Mohamed A.', rating: 5.0, comment: 'Best oversized hoodie I have ever bought. Super soft inside.' },
+    { product_id: 4, user_name: 'يوسف علي', rating: 4.0, comment: 'تيشرت رينجر جميل جداً وألوانه متناسقة.' },
+    { product_id: 5, user_name: 'عمر فاروق', rating: 5.0, comment: 'خفيف ومريح للتمارين اليومية.' },
+    { product_id: 6, user_name: 'Hassan', rating: 5.0, comment: 'التريكو خامته تقيلة وقيمته عالية جداً بالنسبة للسعر.' },
+    { product_id: 7, user_name: 'مصطفى رجب', rating: 5.0, comment: 'جاكيت جينز تحفة ولونه غامق وشيك جداً.' },
+    { product_id: 8, user_name: 'عماد سليمان', rating: 4.0, comment: 'قميص كتان مريح ومناسب للصيف.' }
+  ];
+  const insertReview = db.prepare(`INSERT INTO reviews (product_id, user_name, rating, comment) VALUES (?,?,?,?)`);
+  starterReviews.forEach(r => insertReview.run(r.product_id, r.user_name, r.rating, r.comment));
+  insertReview.finalize(() => {
+    console.log('✓ تم زرع التقييمات التجريبية');
+    // Sync product rating stats
+    const productsToSync = [1, 2, 3, 4, 5, 6, 7, 8];
+    productsToSync.forEach(pid => {
+      db.all('SELECT rating FROM reviews WHERE product_id = ?', [pid], (err, rows) => {
+        if (!err && rows.length > 0) {
+          const count = rows.length;
+          const avg = rows.reduce((sum, row) => sum + row.rating, 0) / count;
+          db.run('UPDATE products SET rating = ?, reviews_count = ? WHERE id = ?', [avg.toFixed(1), count, pid]);
+        }
+      });
+    });
+  });
 });
 
 db.close(err => {
