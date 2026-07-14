@@ -64,6 +64,7 @@ const db = {
  'ALTER TABLE orders ADD COLUMN customer_phone TEXT',
  'ALTER TABLE orders ADD COLUMN customer_address TEXT',
  'ALTER TABLE orders ADD COLUMN customer_city TEXT',
+ 'ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT \'cod\'',
 ].forEach(sql => client.execute(sql).catch(() => {}));
 
 // Ensure notifications table exists
@@ -370,7 +371,7 @@ app.post('/api/contact', (req, res) => {
 
 // ─── ORDERS: Create ───────────────────────────────────────────────────────────
 app.post('/api/orders', (req, res) => {
-  const { items, note, subtotal, shipping, total, customerName, customerPhone, customerAddress, customerCity } = req.body;
+  const { items, note, subtotal, shipping, total, customerName, customerPhone, customerAddress, customerCity, paymentMethod } = req.body;
   const token = req.headers['x-auth-token'] || req.headers['authorization']?.replace('Bearer ', '');
   
   if (!items || !total) return res.status(400).json({ error: 'بيانات الطلب ناقصة' });
@@ -391,17 +392,39 @@ app.post('/api/orders', (req, res) => {
     }
   }
 
-  db.run(
-    'INSERT INTO orders (order_id,user_id,items,note,subtotal,shipping,total,customer_name,customer_phone,customer_address,customer_city) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-    [orderId, userId, itemsStr, note, subtotal, shipping, total, customerName, customerPhone, customerAddress, customerCity],
-    function(err) {
-      if (err) {
-        console.error('Error saving order:', err.message);
-        return res.status(500).json({ error: 'خطأ في حفظ الطلب' });
+  const saveOrder = (pm = 'cod') => {
+    db.run(
+      'INSERT INTO orders (order_id,user_id,items,note,subtotal,shipping,total,customer_name,customer_phone,customer_address,customer_city,payment_method) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      [orderId, userId, itemsStr, note, subtotal, shipping, total, customerName, customerPhone, customerAddress, customerCity, pm],
+      function(err) {
+        if (err) {
+          console.error('Error saving order:', err.message);
+          return res.status(500).json({ error: 'خطأ في حفظ الطلب' });
+        }
+        res.status(201).json({ success: true, orderId, dbRowId: this.lastID, total });
       }
-      res.status(201).json({ success: true, orderId, dbRowId: this.lastID, total });
-    }
-  );
+    );
+  };
+
+  if (userId && paymentMethod === 'points') {
+    db.get('SELECT points FROM users WHERE id = ?', [userId], (err, user) => {
+      if (err || !user) {
+        return res.status(500).json({ error: 'خطأ في التحقق من الحساب' });
+      }
+      const userPoints = user.points || 0;
+      if (userPoints < total) {
+        return res.status(400).json({ error: 'رصيد نقاطك غير كافٍ لإتمام هذا الطلب بالنقاط' });
+      }
+      db.run('UPDATE users SET points = points - ? WHERE id = ?', [total, userId], function(err) {
+        if (err) {
+          return res.status(500).json({ error: 'خطأ في خصم النقاط' });
+        }
+        saveOrder('points');
+      });
+    });
+  } else {
+    saveOrder('cod');
+  }
 });
 // ─── ADMIN: Get All Users ─────────────────────────────────────────────────────
 app.get('/api/admin/users', verifyToken, requireAdmin, (req, res) => {
@@ -539,7 +562,7 @@ app.post('/api/admin/messages/:id/reply', verifyToken, requireAdmin, (req, res) 
 // ─── STATS ────────────────────────────────────────────────────────────────────
 app.get('/api/admin/stats', verifyToken, requireAdmin, (req, res) => {
   const stats = {};
-  db.get("SELECT COALESCE(SUM(total),0) as revenue, COUNT(*) as total_orders FROM orders WHERE status != 'ملغي'", [], (err, row) => {
+  db.get("SELECT COALESCE(SUM(total),0) as revenue, COUNT(*) as total_orders FROM orders WHERE status NOT IN ('ملغي', 'Cancelled', 'تم الاسترجاع', 'Returned')", [], (err, row) => {
     stats.revenue = row?.revenue || 0;
     stats.totalOrders = row?.total_orders || 0;
     db.get('SELECT COUNT(*) as c FROM products', [], (e2, r2) => {

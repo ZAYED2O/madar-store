@@ -425,6 +425,21 @@
         <label for="checkout-notes" style="display:block; margin-bottom:0.5rem; font-weight:500" data-i18n="orderNotes">ملاحظات إضافية (اختياري)</label>
         <textarea id="checkout-notes" placeholder="أي تعليمات خاصة بالتسليم" rows="2" style="width:100%; padding:0.8rem; border:1px solid var(--border); border-radius:6px; background:var(--bg-light); resize:vertical"></textarea>
       </div>
+      <!-- Payment Method Selection -->
+      <div id="checkout-payment-section" style="margin-bottom:1.5rem; display:none;">
+        <label style="display:block; margin-bottom:0.8rem; font-weight:700;" data-i18n="paymentMethod">طريقة الدفع</label>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <label class="payment-option-label" id="pay-opt-cod-label" style="display:flex; align-items:center; gap:0.8rem; padding:1.2rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; background:var(--bg-0); font-weight:600; font-size:1.35rem;">
+            <input type="radio" name="payment_method" value="cod" checked style="accent-color:var(--accent);">
+            <span data-i18n="payCod">الدفع عند الاستلام</span>
+          </label>
+          <label class="payment-option-label" id="pay-opt-points-label" style="display:flex; align-items:center; gap:0.8rem; padding:1.2rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; background:var(--bg-0); font-weight:600; font-size:1.35rem;">
+            <input type="radio" name="payment_method" value="points" style="accent-color:var(--accent);">
+            <span data-i18n="payPoints">الشراء بالنقاط</span>
+          </label>
+        </div>
+        <p id="checkout-points-hint" style="font-size:1.2rem; color:var(--text-muted); margin-top:0.6rem; line-height: 1.4;"></p>
+      </div>
       <button type="submit" class="btn primary-btn full-btn" style="width:100%" data-i18n="confirmOrder">تأكيد وإتمام الطلب</button>
     </form>
   </div>

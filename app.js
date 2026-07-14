@@ -98,6 +98,7 @@ const translations = {
     collectionsHeading: 'المجموعات', collectionsSubheading: 'استكشف مجموعاتنا المنتقاة بعناية',
     ourStoryBtn: 'قصتنا', shopNowBtn: 'تسوق الآن', shopHeading: 'المتجر',
     siteSettings: 'إعدادات الموقع', chooseLanguage: 'لغة الموقع / Language',
+    paymentMethod: 'طريقة الدفع', payCod: 'الدفع عند الاستلام', payPoints: 'الشراء بالنقاط',
   },
   en: {
     navHome: 'Home', navShop: 'Shop', navAbout: 'About', navContact: 'Contact',
@@ -189,6 +190,7 @@ const translations = {
     collectionsHeading: 'Collections', collectionsSubheading: 'Explore our carefully curated collections',
     ourStoryBtn: 'Our Story', shopNowBtn: 'Shop Now', shopHeading: 'Shop',
     siteSettings: 'Site Settings', chooseLanguage: 'Site Language',
+    paymentMethod: 'Payment Method', payCod: 'Cash on Delivery', payPoints: 'Pay with Points',
   }
 };
 
@@ -700,6 +702,48 @@ async function processCheckout() {
     $('checkout-notes').value = $('order-note-field').value || '';
   }
 
+  // Handle Payment options
+  const sub = cart.reduce((acc, c) => acc + c.price * c.qty, 0);
+  const shipping = sub >= 1500 ? 0 : 80;
+  const total = sub + shipping;
+
+  const paymentSection = $('checkout-payment-section');
+  const pointsRadio = $('pay-opt-points-label')?.querySelector('input');
+  const codRadio = $('pay-opt-cod-label')?.querySelector('input');
+  const pointsHint = $('checkout-points-hint');
+
+  // Reset payment selection to COD
+  if (codRadio) codRadio.checked = true;
+
+  if (currentUser && currentUser.points > 0) {
+    if (paymentSection) paymentSection.style.display = 'block';
+    
+    if (pointsHint) {
+      pointsHint.textContent = currentLang === 'ar' 
+        ? `رصيدك الحالي: ${currentUser.points} نقطة (تكلفة الطلب: ${total} نقطة)` 
+        : `Your balance: ${currentUser.points} points (Order cost: ${total} points)`;
+    }
+
+    if (currentUser.points < total) {
+      if (pointsRadio) {
+        pointsRadio.disabled = true;
+        pointsRadio.parentNode.style.opacity = '0.5';
+        pointsRadio.parentNode.style.cursor = 'not-allowed';
+      }
+      if (pointsHint) {
+        pointsHint.innerHTML += `<br><span style="color:var(--red); font-weight:bold">${currentLang === 'ar' ? '⚠️ رصيد نقاطك غير كافٍ للشراء بالنقاط' : '⚠️ Insufficient points for this order'}</span>`;
+      }
+    } else {
+      if (pointsRadio) {
+        pointsRadio.disabled = false;
+        pointsRadio.parentNode.style.opacity = '1';
+        pointsRadio.parentNode.style.cursor = 'pointer';
+      }
+    }
+  } else {
+    if (paymentSection) paymentSection.style.display = 'none';
+  }
+
   // Open the checkout details modal!
   openModal('checkout-info-modal');
 }
@@ -722,6 +766,9 @@ async function submitOrder() {
   const shipping = sub >= 1500 ? 0 : 80;
   const total = sub + shipping;
 
+  const paymentMethodEl = document.querySelector('input[name="payment_method"]:checked');
+  const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'cod';
+
   try {
     // Close the info modal to prevent double click
     closeModal('checkout-info-modal');
@@ -738,13 +785,17 @@ async function submitOrder() {
         customerName,
         customerPhone,
         customerAddress,
-        customerCity
+        customerCity,
+        paymentMethod
       })
     });
     const data = await res.json();
     if (data.success) {
       closeDrawer('cart-drawer');
       cart = []; saveCart(); renderCartBadge();
+      if (currentUser) {
+        loadProfileData(); // Update local points balance immediately
+      }
       const successMsg = $('checkout-success-msg');
       const orderIdEl = $('checkout-order-id');
       if (successMsg) successMsg.textContent = currentLang === 'ar' ? `سيتم الشحن خلال 2-5 أيام عمل. الإجمالي: ${formatCurrency(total)}` : `Will ship within 2-5 business days. Total: ${formatCurrency(total)}`;
@@ -1054,8 +1105,15 @@ async function loadProfileOrders() {
         actionHtml = `<span style="color:var(--green);font-weight:700;font-size:1.25rem">${currentLang === 'ar' ? 'تم الاسترجاع (+نقاط)' : 'Returned (+Points)'}</span>`;
       }
 
+      const paymentMethodBadge = o.payment_method === 'points' 
+        ? `<div style="font-size:1.15rem; color:#f59e0b; font-weight:700; margin-top:0.4rem; display:flex; align-items:center; gap:0.4rem"><i class="fa-solid fa-coins"></i> ${currentLang === 'ar' ? 'بالنقاط' : 'With Points'}</div>`
+        : `<div style="font-size:1.15rem; color:var(--text-muted); margin-top:0.4rem; display:flex; align-items:center; gap:0.4rem"><i class="fa-solid fa-truck"></i> ${currentLang === 'ar' ? 'الدفع عند الاستلام' : 'COD'}</div>`;
+
       tr.innerHTML = `
-        <td style="font-weight:700;color:var(--accent)">${o.order_id}</td>
+        <td style="font-weight:700;color:var(--accent)">
+          ${o.order_id}
+          ${paymentMethodBadge}
+        </td>
         <td>${formatDate(o.created_at)}</td>
         <td>${itemCount} ${currentLang === 'ar' ? 'قطعة' : 'items'}</td>
         <td style="color:var(--cyan);font-weight:800">${formatCurrency(o.total)}</td>
@@ -1278,8 +1336,15 @@ async function loadAdminOrders() {
     orders.forEach(o => {
       const itemCount = Array.isArray(o.items) ? o.items.reduce((a, i) => a + (i.qty || 1), 0) : 1;
       const tr = document.createElement('tr');
+      const paymentMethodBadge = o.payment_method === 'points' 
+        ? `<div style="font-size:1.15rem; color:#f59e0b; font-weight:700; margin-top:0.4rem; display:flex; align-items:center; gap:0.4rem"><i class="fa-solid fa-coins"></i> ${currentLang === 'ar' ? 'بالنقاط' : 'With Points'}</div>`
+        : `<div style="font-size:1.15rem; color:var(--text-muted); margin-top:0.4rem; display:flex; align-items:center; gap:0.4rem"><i class="fa-solid fa-truck"></i> ${currentLang === 'ar' ? 'عند الاستلام' : 'COD'}</div>`;
+
       tr.innerHTML = `
-        <td style="font-weight:700;color:var(--accent)">${o.order_id}</td>
+        <td style="font-weight:700;color:var(--accent)">
+          ${o.order_id}
+          ${paymentMethodBadge}
+        </td>
         <td>${o.user_name || (currentLang === 'ar' ? 'ضيف' : 'Guest')}</td>
         <td>
           <div style="font-size:0.9em;line-height:1.4">
