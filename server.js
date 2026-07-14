@@ -250,23 +250,31 @@ app.post('/api/products/:id/reviews', verifyToken, (req, res) => {
     return res.status(400).json({ error: 'الرجاء كتابة تعليق' });
   }
 
-  db.run('INSERT INTO reviews (product_id, user_id, user_name, rating, comment) VALUES (?,?,?,?,?)',
-    [productId, userId, userName, rating, comment.trim()], function(err) {
-      if (err) return res.status(500).json({ error: 'خطأ في إضافة التقييم' });
+  // Check if user already reviewed this product
+  db.get('SELECT id FROM reviews WHERE product_id = ? AND user_id = ?', [productId, userId], (err, existing) => {
+    if (err) return res.status(500).json({ error: 'خطأ في التحقق من التقييمات السابقة' });
+    if (existing) {
+      return res.status(400).json({ error: 'لقد قمت بتقييم هذا المنتج مسبقاً. يُسمح بتقييم واحد فقط لكل منتج.' });
+    }
 
-      // Re-calculate average rating and reviews count for the product
-      db.all('SELECT rating FROM reviews WHERE product_id = ?', [productId], (err, rows) => {
-        if (!err && rows.length > 0) {
-          const count = rows.length;
-          const avg = rows.reduce((sum, r) => sum + r.rating, 0) / count;
-          db.run('UPDATE products SET rating = ?, reviews_count = ? WHERE id = ?', [avg.toFixed(1), count, productId], (err2) => {
-            if (err2) console.error('Failed to update product rating stats:', err2);
-          });
-        }
+    db.run('INSERT INTO reviews (product_id, user_id, user_name, rating, comment) VALUES (?,?,?,?,?)',
+      [productId, userId, userName, rating, comment.trim()], function(err) {
+        if (err) return res.status(500).json({ error: 'خطأ في إضافة التقييم' });
+
+        // Re-calculate average rating and reviews count for the product
+        db.all('SELECT rating FROM reviews WHERE product_id = ?', [productId], (err, rows) => {
+          if (!err && rows.length > 0) {
+            const count = rows.length;
+            const avg = rows.reduce((sum, r) => sum + r.rating, 0) / count;
+            db.run('UPDATE products SET rating = ?, reviews_count = ? WHERE id = ?', [avg.toFixed(1), count, productId], (err2) => {
+              if (err2) console.error('Failed to update product rating stats:', err2);
+            });
+          }
+        });
+
+        res.status(201).json({ success: true, message: 'تم إضافة التقييم بنجاح' });
       });
-
-      res.status(201).json({ success: true, message: 'تم إضافة التقييم بنجاح' });
-    });
+  });
 });
 
 function formatProduct(row) {
