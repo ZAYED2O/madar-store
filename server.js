@@ -66,6 +66,8 @@ const db = {
  'ALTER TABLE orders ADD COLUMN customer_city TEXT',
  'ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT \'cod\'',
  'ALTER TABLE products ADD COLUMN additional_images TEXT DEFAULT \'[]\'',
+ 'ALTER TABLE contact_messages ADD COLUMN sender_type TEXT DEFAULT \'user\'',
+ 'ALTER TABLE contact_messages ADD COLUMN is_read INTEGER DEFAULT 0',
 ].forEach(sql => client.execute(sql).catch(() => {}));
 
 // Ensure categories table exists
@@ -423,12 +425,28 @@ app.post('/api/profile/upload-avatar', verifyToken, upload.single('image'), (req
   res.json({ success: true, filePath });
 });
 
-// ─── USER: Get My Support Messages ────────────────────────────────────────────
+// ─── USER: Get My Support Messages (Chat) ──────────────────────────────────────
 app.get('/api/profile/messages', verifyToken, (req, res) => {
-  db.all('SELECT * FROM contact_messages WHERE email = ? ORDER BY id DESC', [req.user.email], (err, rows) => {
+  db.all('SELECT * FROM contact_messages WHERE email = ? ORDER BY id ASC', [req.user.email], (err, rows) => {
     if (err) return res.status(500).json({ error: 'خطأ في جلب الرسائل' });
     res.json(rows);
   });
+});
+
+app.get('/api/profile/messages/unread-count', verifyToken, (req, res) => {
+  db.get("SELECT COUNT(*) as count FROM contact_messages WHERE email = ? AND sender_type = 'admin' AND is_read = 0",
+    [req.user.email], (err, row) => {
+      if (err) return res.status(500).json({ error: 'خطأ في حساب الرسائل غير المقروءة' });
+      res.json({ count: row ? row.count : 0 });
+    });
+});
+
+app.put('/api/profile/messages/read', verifyToken, (req, res) => {
+  db.run("UPDATE contact_messages SET is_read = 1 WHERE email = ? AND sender_type = 'admin'",
+    [req.user.email], function(err) {
+      if (err) return res.status(500).json({ error: 'خطأ في تحديث حالة الرسائل' });
+      res.json({ success: true });
+    });
 });
 
 // ─── USER: Change Password ────────────────────────────────────────────────────
@@ -488,14 +506,57 @@ app.post('/api/profile/orders/:id/return', verifyToken, (req, res) => {
   });
 });
 
-// ─── CONTACT MESSAGES ──────────────────────────────────────────────────────────
-app.post('/api/contact', (req, res) => {
-  const { name, email, subject, message } = req.body;
-  if (!name || !email || !message) return res.status(400).json({ error: 'الاسم والبريد والرسالة حقول مطلوبة' });
+async function optionalVerifyToken(req, res, next) {
+  const token = req.headers['x-auth-token'] || req.headers['authorization']?.replace('Bearer ', '');
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = { id: decoded.id, name: decoded.name, email: decoded.email, role: decoded.role };
+    next();
+  } catch (err) {
+    req.user = null;
+    next();
+  }
+}
 
-  db.run('INSERT INTO contact_messages (name, email, subject, message) VALUES (?,?,?,?)',
-    [name, email, subject || null, message], function(err) {
+// ─── CONTACT MESSAGES ──────────────────────────────────────────────────────────
+app.get('/api/contact', (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ error: 'البريد الإلكتروني مطلوب' });
+  
+  db.all('SELECT * FROM contact_messages WHERE email = ? ORDER BY id ASC', [email.trim()], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'خطأ في جلب الرسائل' });
+    res.json(rows);
+  });
+});
+
+app.post('/api/contact', optionalVerifyToken, (req, res) => {
+  let { name, email, message } = req.body;
+
+  if (req.user) {
+    name = req.user.name;
+    email = req.user.email;
+  }
+
+  if (!name || !email || !message || !message.trim()) {
+    return res.status(400).json({ error: 'الاسم والبريد والرسالة حقول مطلوبة' });
+  }
+
+  db.run('INSERT INTO contact_messages (name, email, message, sender_type, is_read) VALUES (?,?,?,?,0)',
+    [name.trim(), email.trim(), message.trim(), 'user'], function(err) {
       if (err) return res.status(500).json({ error: 'خطأ في حفظ رسالتك' });
+
+      // Create admin notification
+      const msgAr = `رسالة دردشة جديدة من ${name}`;
+      const msgEn = `New chat message from ${name}`;
+      db.run('INSERT INTO notifications (type, title_ar, title_en, message_ar, message_en, target_id) VALUES (?,?,?,?,?,?)',
+        ['chat_message', 'رسالة دردشة جديدة', 'New Chat Message', msgAr, msgEn, email.trim()], function(e) {
+          if (e) console.error('Failed to create chat notification:', e.message);
+        });
+
       res.status(201).json({ success: true, messageId: this.lastID });
     });
 });
@@ -725,7 +786,8 @@ app.delete('/api/admin/categories/:id', verifyToken, requireAdmin, (req, res) =>
   });
 });
 
-// ─── ADMIN: Contact Messages Inbox CRUD ─────────────────────────────────────────
+// ─── ADMIN: Contact Messages & Chat Inbox ───────────────────────────────────────
+// Compatibility endpoint
 app.get('/api/admin/messages', verifyToken, requireAdmin, (req, res) => {
   db.all('SELECT * FROM contact_messages ORDER BY id DESC', [], (err, rows) => {
     if (err) return res.status(500).json({ error: 'خطأ في جلب رسائل التواصل' });
@@ -733,15 +795,88 @@ app.get('/api/admin/messages', verifyToken, requireAdmin, (req, res) => {
   });
 });
 
+// Admin: Get all active threads
+app.get('/api/admin/messages/threads', verifyToken, requireAdmin, (req, res) => {
+  const sql = `
+    SELECT 
+      m.email,
+      m.name,
+      m.message as last_message,
+      m.created_at,
+      (SELECT COUNT(*) FROM contact_messages WHERE email = m.email AND sender_type = 'user' AND is_read = 0) as unread_count
+    FROM contact_messages m
+    INNER JOIN (
+      SELECT email, MAX(id) as max_id
+      FROM contact_messages
+      GROUP BY email
+    ) latest ON m.id = latest.max_id
+    ORDER BY m.created_at DESC
+  `;
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      console.error('Error fetching admin chat threads:', err);
+      return res.status(500).json({ error: 'خطأ في جلب المحادثات' });
+    }
+    res.json(rows);
+  });
+});
+
+// Admin: Get all messages in a specific thread
+app.get('/api/admin/messages/thread/:email', verifyToken, requireAdmin, (req, res) => {
+  db.all('SELECT * FROM contact_messages WHERE email = ? ORDER BY id ASC', [req.params.email], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'خطأ في جلب رسائل المحادثة' });
+    res.json(rows);
+  });
+});
+
+// Admin: Send message to a thread
+app.post('/api/admin/messages/thread/:email/send', verifyToken, requireAdmin, (req, res) => {
+  const { message } = req.body;
+  const email = req.params.email;
+
+  if (!message || !message.trim()) {
+    return res.status(400).json({ error: 'محتوى الرسالة لا يمكن أن يكون فارغاً' });
+  }
+
+  db.get('SELECT name FROM contact_messages WHERE email = ? LIMIT 1', [email], (err, row) => {
+    const name = row ? row.name : 'Customer';
+
+    db.run('INSERT INTO contact_messages (name, email, message, sender_type, is_read) VALUES (?,?,?,?,0)',
+      [name, email, message.trim(), 'admin'], function(err) {
+        if (err) return res.status(500).json({ error: 'خطأ في إرسال الرسالة' });
+        res.status(201).json({ success: true, messageId: this.lastID });
+      });
+  });
+});
+
+// Admin: Mark customer messages as read in a thread
+app.put('/api/admin/messages/thread/:email/read', verifyToken, requireAdmin, (req, res) => {
+  db.run("UPDATE contact_messages SET is_read = 1 WHERE email = ? AND sender_type = 'user'",
+    [req.params.email], function(err) {
+      if (err) return res.status(500).json({ error: 'خطأ في تحديث حالة الرسائل' });
+      res.json({ success: true });
+    });
+});
+
+// Legacy Admin reply compat
 app.post('/api/admin/messages/:id/reply', verifyToken, requireAdmin, (req, res) => {
   const { replyText } = req.body;
   if (!replyText || !replyText.trim()) return res.status(400).json({ error: 'محتوى الرد لا يمكن أن يكون فارغاً' });
 
-  db.run('UPDATE contact_messages SET reply_text = ?, status = ? WHERE id = ?',
-    [replyText.trim(), 'تم الرد', req.params.id], function(err) {
-      if (err || this.changes === 0) return res.status(500).json({ error: 'خطأ في تحديث الرسالة' });
-      res.json({ success: true, message: 'تم إرسال الرد وتحديث حالة الرسالة بنجاح' });
-    });
+  db.get('SELECT * FROM contact_messages WHERE id = ?', [req.params.id], (err, msg) => {
+    if (err || !msg) return res.status(404).json({ error: 'الرسالة غير موجودة' });
+
+    db.run('UPDATE contact_messages SET reply_text = ?, status = ? WHERE id = ?',
+      [replyText.trim(), 'تم الرد', req.params.id], function(err2) {
+        if (err2) return res.status(500).json({ error: 'خطأ في تحديث الرسالة' });
+
+        // Also insert a message in the chat thread as an admin message for visual continuity
+        db.run('INSERT INTO contact_messages (name, email, message, sender_type, is_read) VALUES (?,?,?,?,0)',
+          ['Admin', msg.email, replyText.trim(), 'admin'], function(err3) {
+            res.json({ success: true, message: 'تم إرسال الرد وتحديث حالة الرسالة بنجاح' });
+          });
+      });
+  });
 });
 
 // ─── STATS ────────────────────────────────────────────────────────────────────

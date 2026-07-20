@@ -363,6 +363,7 @@ function navigate(route) {
   else if (route === 'admin') { loadAdminData(); }
   else if (route === 'profile') { loadProfileData(); }
   else if (route === 'cart') { renderCartPage(); }
+  else if (route === 'contact') { loadUserChat(); }
 }
 
 function updateNavActive() {
@@ -1318,35 +1319,273 @@ async function handleAvatarUpload(fileInput) {
 
 // ─── PROFILE: SUPPORT MESSAGES ────────────────────────────────────────────────
 async function loadProfileMessages() {
-  try {
-    const res = await apiFetch('/api/profile/messages');
-    if (!res) return;
-    const msgs = await res.json();
-    const tbody = $('profile-messages-tbody');
-    if (!tbody) return;
+  const tbody = $('profile-messages-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="4" style="text-align:center;padding:3rem">
+        <p style="margin-bottom:1.5rem;color:var(--text-muted)">${currentLang === 'ar' ? 'تم الانتقال إلى نظام الدردشة المباشرة للدعم الفني!' : 'We transitioned to live chat support!'}</p>
+        <a href="#contact" class="btn primary-btn btn-sm" onclick="navigate('contact')"><i class="fa-regular fa-comments" style="margin-inline-end:0.4rem"></i>${currentLang === 'ar' ? 'افتح الدردشة المباشرة' : 'Open Live Chat'}</a>
+      </td>
+    </tr>
+  `;
+}
 
-    if (!msgs.length) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:3rem">${t('noMessages')}</td></tr>`;
+// ─── SUPPORT CHAT SYSTEM ──────────────────────────────────────────────────────
+let isFetchingChat = false;
+let activeAdminChatEmail = null;
+
+async function loadUserChat() {
+  const container = $('user-chat-messages');
+  const form = $('user-chat-form');
+  if (!container) return;
+
+  let name = '';
+  let email = '';
+
+  if (currentUser) {
+    name = currentUser.name;
+    email = currentUser.email;
+  } else {
+    name = localStorage.getItem('madar_guest_name') || '';
+    email = localStorage.getItem('madar_guest_email') || '';
+  }
+
+  if (!email) {
+    if (form) form.style.display = 'none';
+    container.innerHTML = `
+      <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r-md);padding:2.4rem;max-width:400px;margin:2rem auto;text-align:center">
+        <h3 style="color:#fff;margin-bottom:1rem;font-weight:700">${currentLang === 'ar' ? 'دردشة الدعم الفني المباشر' : 'Live Support Chat'}</h3>
+        <p style="font-size:1.3rem;color:var(--text-muted);margin-bottom:2rem">${currentLang === 'ar' ? 'يرجى إدخال اسمك وبريدك الإلكتروني لبدء المحادثة فوراً' : 'Please enter your name and email to start the chat'}</p>
+        <form id="chat-guest-init-form" style="display:flex;flex-direction:column;gap:1.2rem;text-align:right">
+          <div class="form-group">
+            <label style="font-size:1.25rem">${currentLang === 'ar' ? 'الاسم كاملاً' : 'Full Name'}</label>
+            <input type="text" id="chat-guest-name" required style="width:100%;padding:1rem;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg-1);color:#fff;">
+          </div>
+          <div class="form-group">
+            <label style="font-size:1.25rem">${currentLang === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}</label>
+            <input type="email" id="chat-guest-email" required style="width:100%;padding:1rem;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg-1);color:#fff;">
+          </div>
+          <button type="submit" class="btn primary-btn full-btn" style="margin-top:1rem">${currentLang === 'ar' ? 'ابدأ المحادثة الآن' : 'Start Chat Now'}</button>
+        </form>
+      </div>
+    `;
+
+    $('chat-guest-init-form')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const guestName = $('chat-guest-name').value.trim();
+      const guestEmail = $('chat-guest-email').value.trim();
+      if (guestName && guestEmail) {
+        localStorage.setItem('madar_guest_name', guestName);
+        localStorage.setItem('madar_guest_email', guestEmail);
+        loadUserChat();
+      }
+    });
+    return;
+  }
+
+  if (form) form.style.display = 'flex';
+
+  try {
+    let url = '/api/profile/messages';
+    let headers = apiHeaders();
+    if (!currentUser) {
+      url = `/api/contact?email=${encodeURIComponent(email)}`;
+      headers = { 'Content-Type': 'application/json' };
+    }
+
+    if (isFetchingChat) return;
+    isFetchingChat = true;
+    const res = await fetch(url, { headers });
+    isFetchingChat = false;
+
+    if (res.status === 200) {
+      const msgs = await res.json();
+      renderChatBubbles(container, msgs);
+      
+      if (currentUser) {
+        await apiFetch('/api/profile/messages/read', { method: 'PUT' });
+        const dot1 = $('contact-nav-badge');
+        const dot2 = $('contact-mobile-badge');
+        if (dot1) dot1.style.display = 'none';
+        if (dot2) dot2.style.display = 'none';
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load user chat:', err);
+    isFetchingChat = false;
+  }
+}
+
+function renderChatBubbles(container, messages) {
+  const previousScrollHeight = container.scrollHeight;
+  const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+
+  if (!messages.length) {
+    container.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);">${currentLang === 'ar' ? 'أرسل رسالة لبدء المحادثة مع الدعم الفني!' : 'Send a message to start chatting with support!'}</div>`;
+    return;
+  }
+
+  container.innerHTML = messages.map(m => {
+    const isUser = m.sender_type === 'user';
+    const bubbleClass = isUser ? 'user' : 'admin';
+    const time = new Date(m.created_at).toLocaleTimeString(currentLang === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="chat-bubble ${bubbleClass}">
+        <div class="chat-bubble-content">${m.message}</div>
+        <span class="chat-timestamp">${time}</span>
+      </div>
+    `;
+  }).join('');
+
+  if (isAtBottom || previousScrollHeight === 0) {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+async function submitUserChatMessage(e) {
+  e.preventDefault();
+  const input = $('user-chat-input');
+  if (!input) return;
+  const message = input.value.trim();
+  if (!message) return;
+
+  const email = currentUser ? currentUser.email : localStorage.getItem('madar_guest_email');
+  const name = currentUser ? currentUser.name : localStorage.getItem('madar_guest_name');
+
+  const body = { name, email, message };
+
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      input.value = '';
+      await loadUserChat();
+    } else {
+      const data = await res.json();
+      showToast(data.error || 'Failed to send', 'error');
+    }
+  } catch {
+    showToast(currentLang === 'ar' ? 'خطأ في الإرسال' : 'Send error', 'error');
+  }
+}
+
+async function loadAdminChats() {
+  const threadsContainer = $('admin-chat-threads');
+  if (!threadsContainer) return;
+
+  try {
+    const res = await apiFetch('/api/admin/messages/threads');
+    if (!res) return;
+    const threads = await res.json();
+
+    if (!threads.length) {
+      threadsContainer.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);">${currentLang === 'ar' ? 'لا توجد محادثات نشطة' : 'No active chats'}</div>`;
       return;
     }
 
-    tbody.innerHTML = '';
-    msgs.forEach(m => {
-      const isReplied = m.status === 'تم الرد';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="font-weight:700">${m.subject || '—'}</td>
-        <td style="font-size:1.35rem;max-width:240px;white-space:normal;line-height:1.5">${m.message}</td>
-        <td>
-          <span class="status-badge ${isReplied ? 'status-shipped' : 'status-pending'}">${m.status || (currentLang === 'ar' ? 'قيد الانتظار' : 'Pending')}</span>
-        </td>
-        <td style="font-size:1.3rem;color:${isReplied ? 'var(--green)' : 'var(--text-muted)'}">
-          ${m.reply_text ? `<i class="fa-solid fa-reply" style="margin-inline-end:0.4rem"></i>${m.reply_text}` : `<em>${t('noReplyYet')}</em>`}
-        </td>
+    threadsContainer.innerHTML = threads.map(t => {
+      const isActive = t.email === activeAdminChatEmail;
+      const unreadBadge = t.unread_count > 0 ? `<span class="chat-thread-badge">${t.unread_count}</span>` : '';
+      return `
+        <div class="chat-thread-item ${isActive ? 'active' : ''}" data-email="${t.email}">
+          <div class="chat-thread-info">
+            <div class="chat-thread-name">${t.name}</div>
+            <div class="chat-thread-msg">${t.last_message}</div>
+          </div>
+          ${unreadBadge}
+        </div>
       `;
-      tbody.appendChild(tr);
+    }).join('');
+
+    threadsContainer.querySelectorAll('.chat-thread-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const email = item.dataset.email;
+        activeAdminChatEmail = email;
+        
+        threadsContainer.querySelectorAll('.chat-thread-item').forEach(x => x.classList.remove('active'));
+        item.classList.add('active');
+
+        loadAdminActiveChat(email);
+      });
     });
-  } catch {}
+  } catch (err) {
+    console.error('Failed to load admin threads:', err);
+  }
+}
+
+async function loadAdminActiveChat(email) {
+  const log = $('admin-active-chat-log');
+  const form = $('admin-chat-form');
+  const placeholder = $('admin-chat-placeholder');
+  if (!log || !form || !placeholder) return;
+
+  try {
+    const res = await apiFetch(`/api/admin/messages/thread/${encodeURIComponent(email)}`);
+    if (!res) return;
+    const messages = await res.json();
+
+    placeholder.style.display = 'none';
+    log.style.display = 'flex';
+    form.style.display = 'flex';
+
+    renderChatBubbles(log, messages);
+
+    await apiFetch(`/api/admin/messages/thread/${encodeURIComponent(email)}/read`, { method: 'PUT' });
+    loadAdminChats();
+  } catch (err) {
+    console.error('Failed to load admin active chat:', err);
+  }
+}
+
+async function submitAdminChatMessage(e) {
+  e.preventDefault();
+  const input = $('admin-chat-input');
+  if (!input || !activeAdminChatEmail) return;
+  const message = input.value.trim();
+  if (!message) return;
+
+  try {
+    const res = await apiFetch(`/api/admin/messages/thread/${encodeURIComponent(activeAdminChatEmail)}/send`, {
+      method: 'POST',
+      body: JSON.stringify({ message })
+    });
+    if (res && res.ok) {
+      input.value = '';
+      await loadAdminActiveChat(activeAdminChatEmail);
+    }
+  } catch (err) {
+    console.error('Failed to send admin chat message:', err);
+  }
+}
+
+async function checkUserUnreadMessages() {
+  if (!authToken || !currentUser) return;
+  try {
+    const res = await fetch('/api/profile/messages/unread-count', {
+      headers: { 'x-auth-token': authToken }
+    });
+    if (res.status === 200) {
+      const data = await res.json();
+      const count = data.count || 0;
+      
+      const dot1 = $('contact-nav-badge');
+      const dot2 = $('contact-mobile-badge');
+      
+      if (count > 0 && currentRoute !== 'contact') {
+        if (dot1) dot1.style.display = 'inline-block';
+        if (dot2) dot2.style.display = 'inline-block';
+      } else {
+        if (dot1) dot1.style.display = 'none';
+        if (dot2) dot2.style.display = 'none';
+      }
+    }
+  } catch (err) {
+    console.error('Failed to check user unread messages:', err);
+  }
 }
 
 async function handleChangePassword(e) {
@@ -1400,7 +1639,7 @@ async function loadAdminData() {
     { name: 'Users', fn: loadAdminUsers },
     { name: 'Categories', fn: loadAdminCategories },
     { name: 'CMS', fn: loadAdminCMS },
-    { name: 'Messages', fn: loadAdminMessages },
+    { name: 'Messages', fn: loadAdminChats },
     { name: 'Announcements', fn: loadAdminAnnouncements },
     { name: 'Notifications', fn: loadAdminNotifications },
   ];
@@ -2478,6 +2717,8 @@ function setupAdminTabs() {
         loadAdminNotifications();
       } else if (tab === 'categories') {
         loadAdminCategories();
+      } else if (tab === 'messages') {
+        loadAdminChats();
       }
     });
   });
@@ -2498,37 +2739,8 @@ function setupProfileTabs() {
 
 // ─── CONTACT FORM ─────────────────────────────────────────────────────────────
 function setupContactForm() {
-  $('contact-form')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const name = $('cf-name').value.trim();
-    const email = $('cf-email').value.trim();
-    const subject = $('cf-subject').value.trim();
-    const message = $('cf-message').value.trim();
-    if (!name || !email || !message) return;
-
-    try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, subject, message })
-      });
-      const data = await res.json();
-      if (data.success) {
-        const wrapper = $('contact-form-wrapper');
-        if (wrapper) wrapper.innerHTML = `
-          <div class="contact-success-alert">
-            <div class="success-icon-circle"><i class="fa-solid fa-paper-plane"></i></div>
-            <h3 data-i18n="orderSuccess">${currentLang === 'ar' ? 'تم الإرسال!' : 'Message Sent!'}</h3>
-            <p>${currentLang === 'ar' ? 'شكراً لتواصلك معنا. تم حفظ رسالتك وسيرد عليك الإدارة قريباً.' : 'Thank you! Your message has been saved, we will reply soon.'}</p>
-            <button class="btn primary-btn" onclick="window.location.hash='contact'">${t('continueShopping')}</button>
-          </div>`;
-      } else {
-        showToast(data.error || 'Failed to send message', 'error');
-      }
-    } catch {
-      showToast(currentLang === 'ar' ? 'خطأ في الاتصال' : 'Connection error', 'error');
-    }
-  });
+  $('user-chat-form')?.addEventListener('submit', submitUserChatMessage);
+  $('admin-chat-form')?.addEventListener('submit', submitAdminChatMessage);
 }
 
 // ─── NEWSLETTER ───────────────────────────────────────────────────────────────
@@ -2568,13 +2780,15 @@ function setupAccordions() {
 }
 
 async function syncUserProfile() {
-  if (!authToken) return;
+  if (!authToken || !currentUser) return;
   try {
     const res = await fetch('/api/profile', {
       headers: { 'x-auth-token': authToken }
     });
     if (res.status === 200) {
       const freshUser = await res.json();
+      const previousRole = currentUser.role;
+
       currentUser = {
         id: freshUser.id,
         name: freshUser.name,
@@ -2589,8 +2803,28 @@ async function syncUserProfile() {
       localStorage.setItem('madar_user', JSON.stringify(currentUser));
       updateAuthUI();
 
-      if (currentRoute === 'admin' && currentUser.role !== 'admin') {
-        showToast(currentLang === 'ar' ? 'تم سحب صلاحيات المسؤول منك' : 'Admin permissions revoked', 'error');
+      // Role was revoked: was admin, now customer
+      if (previousRole === 'admin' && currentUser.role !== 'admin') {
+        showToast(currentLang === 'ar' ? 'تم سحب صلاحيات المسؤول منك' : 'Admin permissions revoked', 'error', 5000);
+        // Force navigate away from admin page
+        if (currentRoute === 'admin') {
+          navigate('home');
+        }
+      }
+
+      // Role was granted: was customer, now admin
+      if (previousRole !== 'admin' && currentUser.role === 'admin') {
+        showToast(currentLang === 'ar' ? 'تم منحك صلاحيات المسؤول' : 'Admin permissions granted', 'success');
+      }
+
+    } else if (res.status === 401) {
+      // Token expired or invalid
+      authToken = null;
+      currentUser = null;
+      localStorage.removeItem('madar_token');
+      localStorage.removeItem('madar_user');
+      updateAuthUI();
+      if (currentRoute === 'admin' || currentRoute === 'profile') {
         navigate('home');
       }
     }
@@ -2619,14 +2853,11 @@ async function init() {
     if (currentUser.role === 'admin') {
       checkUnreadNotifications();
       setInterval(checkUnreadNotifications, 30000); // Check every 30s
-
-      // Periodically verify if admin access is still valid (every 15s)
-      setInterval(() => {
-        if (currentRoute === 'admin') {
-          syncUserProfile();
-        }
-      }, 15000);
     }
+
+    // Periodically verify role/profile for ALL logged-in users (every 15s)
+    // This ensures admin revocation kicks them out promptly
+    setInterval(syncUserProfile, 15000);
   }
 
   // ── Header Actions ──
@@ -2807,6 +3038,19 @@ async function init() {
   // Initialize badges
   renderCartBadge();
   renderWishlistBadge();
+
+  // Periodically check user unread messages (every 10s)
+  checkUserUnreadMessages();
+  setInterval(checkUserUnreadMessages, 10000);
+
+  // Periodically check active chats and refresh chat log (every 5s)
+  setInterval(() => {
+    if (currentRoute === 'contact') {
+      loadUserChat();
+    } else if (currentRoute === 'admin' && activeAdminChatEmail && !$('admin-tab-messages').classList.contains('hidden')) {
+      loadAdminActiveChat(activeAdminChatEmail);
+    }
+  }, 5000);
 }
 
 function setupProductReviews() {

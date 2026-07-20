@@ -121,6 +121,8 @@ db.serialize(async () => {
     message TEXT NOT NULL,
     reply_text TEXT,
     status TEXT DEFAULT 'قيد الانتظار',
+    sender_type TEXT DEFAULT 'user',
+    is_read INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`, err => { if (!err) console.log('✓ جدول رسائل التواصل'); });
 

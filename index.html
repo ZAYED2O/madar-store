@@ -46,7 +46,7 @@
         <a href="#home" class="nav-link" data-i18n="navHome">الرئيسية</a>
         <a href="#shop" class="nav-link" data-i18n="navShop">المتجر</a>
         <a href="#about" class="nav-link" data-i18n="navAbout">عن مدار</a>
-        <a href="#contact" class="nav-link" data-i18n="navContact">تواصل</a>
+        <a href="#contact" class="nav-link" data-i18n="navContact" style="position:relative">تواصل <span id="contact-nav-badge" class="badge-dot" style="display:none;position:absolute;top:0.4rem;right:-0.6rem"></span></a>
       </nav>
     </div>
     <div class="header-center">
@@ -163,7 +163,7 @@
         <a href="#home" class="drawer-link" data-i18n="navHome">الرئيسية</a>
         <a href="#shop" class="drawer-link" data-i18n="navShop">المتجر</a>
         <a href="#about" class="drawer-link" data-i18n="navAbout">عن مدار</a>
-        <a href="#contact" class="drawer-link" data-i18n="navContact">تواصل</a>
+        <a href="#contact" class="drawer-link" data-i18n="navContact" style="position:relative">تواصل <span id="contact-mobile-badge" class="badge-dot" style="display:none;position:absolute;top:1rem;right:1rem"></span></a>
       </nav>
       <div class="drawer-footer-actions">
         <a href="#" class="drawer-action-link" id="mobile-account-link">
@@ -654,17 +654,22 @@
             <div class="info-text"><h4 data-i18n="address">العنوان</h4><p data-i18n="contactAddress">القاهرة، مصر</p></div>
           </div>
         </div>
-        <div class="contact-form-card" id="contact-form-wrapper">
-          <h3 class="form-card-title" data-i18n="sendMessage">أرسل رسالة</h3>
-          <form id="contact-form">
-            <div class="form-row-2">
-              <div class="form-group"><label data-i18n="name">الاسم</label><input type="text" id="cf-name" required></div>
-              <div class="form-group"><label data-i18n="email">البريد</label><input type="email" id="cf-email" required></div>
+        <div class="contact-form-card" id="contact-form-wrapper" style="padding: 0;">
+          <div class="chat-container">
+            <div class="chat-header">
+              <div class="chat-header-title">
+                <div class="chat-status-dot"></div>
+                <span data-i18n="supportChatTitle">دردشة الدعم الفني المباشر</span>
+              </div>
             </div>
-            <div class="form-group"><label data-i18n="subject">الموضوع</label><input type="text" id="cf-subject"></div>
-            <div class="form-group"><label data-i18n="message">الرسالة</label><textarea id="cf-message" rows="5" required></textarea></div>
-            <button type="submit" class="btn primary-btn full-btn" data-i18n="sendMessage">إرسال الرسالة</button>
-          </form>
+            <div class="chat-messages-log" id="user-chat-messages">
+              <div style="text-align:center;padding:3rem;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;margin-bottom:1rem;display:block"></i>جارٍ تحميل المحادثة...</div>
+            </div>
+            <form id="user-chat-form" class="chat-input-panel">
+              <input type="text" id="user-chat-input" class="chat-input-field" placeholder="اكتب رسالتك هنا..." required autocomplete="off">
+              <button type="submit" class="btn primary-btn chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
@@ -1135,24 +1140,37 @@
       <!-- MESSAGES TAB -->
       <div id="admin-tab-messages" class="hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
-          <h2 class="panel-title" style="margin:0" data-i18n="manageMessages">الرسائل الواردة</h2>
+          <h2 class="panel-title" style="margin:0" data-i18n="manageMessages">دردشة الدعم الفني والرسائل</h2>
         </div>
-        <div class="admin-table-responsive">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th data-i18n="name">المرسل</th>
-                <th data-i18n="email">البريد</th>
-                <th data-i18n="subject">الموضوع</th>
-                <th data-i18n="message">الرسالة</th>
-                <th data-i18n="replyText">الرد</th>
-                <th data-i18n="actions">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody id="admin-messages-tbody">
-              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
-            </tbody>
-          </table>
+        
+        <div class="admin-chat-layout">
+          <!-- Sidebar: conversations list -->
+          <div class="admin-chat-sidebar">
+            <div class="admin-chat-sidebar-header" data-i18n="activeChats">المحادثات النشطة</div>
+            <div class="admin-chat-threads-list" id="admin-chat-threads">
+              <div style="text-align:center;padding:3rem;color:var(--text-muted);">لا توجد محادثات نشطة</div>
+            </div>
+          </div>
+          
+          <!-- Main Area: Chat messages and input -->
+          <div class="admin-chat-main">
+            <!-- Active Chat Messages Log -->
+            <div id="admin-active-chat-log" class="chat-messages-log" style="display:none;">
+              <!-- bubbles -->
+            </div>
+            
+            <!-- Chat Input panel -->
+            <form id="admin-chat-form" class="chat-input-panel" style="display:none;">
+              <input type="text" id="admin-chat-input" class="chat-input-field" placeholder="اكتب ردك هنا..." required autocomplete="off">
+              <button type="submit" class="btn primary-btn chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+            
+            <!-- Placeholder when no chat is selected -->
+            <div class="admin-chat-placeholder" id="admin-chat-placeholder">
+              <i class="fa-regular fa-comments"></i>
+              <p data-i18n="selectChatPlaceholder">الرجاء اختيار محادثة من القائمة الجانبية للبدء بالرد</p>
+            </div>
+          </div>
         </div>
       </div>
 
