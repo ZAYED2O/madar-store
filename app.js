@@ -1778,7 +1778,7 @@ async function loadAdminUsers() {
       const roleLabel = isAdmin ? (currentLang === 'ar' ? 'مدير' : 'Admin') : (currentLang === 'ar' ? 'عميل' : 'Customer');
       tr.innerHTML = `
         <td style="color:var(--text-muted)">#${u.id}</td>
-        <td style="font-weight:700;color:#fff">${u.name}</td>
+        <td style="font-weight:700;color:#222222">${u.name}</td>
         <td style="color:var(--text-muted)">${u.email}</td>
         <td><span class="status-badge ${isAdmin ? 'status-shipped' : 'status-pending'}">${roleLabel}</span></td>
         <td>${formatDate(u.created_at)}</td>
