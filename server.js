@@ -214,10 +214,15 @@ async function verifyToken(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (!req.user || req.user.role !== 'admin') {
+  if (!req.user) {
     return res.status(403).json({ error: 'صلاحيات المدير مطلوبة' });
   }
-  next();
+  db.get('SELECT role FROM users WHERE id = ?', [req.user.id], (err, row) => {
+    if (err || !row || row.role !== 'admin') {
+      return res.status(403).json({ error: 'صلاحيات المدير مطلوبة أو تم سحبها' });
+    }
+    next();
+  });
 }
 
 // ─── FILE UPLOAD ─────────────────────────────────────────────────────────────

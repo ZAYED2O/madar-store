@@ -243,6 +243,16 @@ async function apiFetch(url, options = {}) {
     openModal('account-modal');
     return null;
   }
+  if (res.status === 403) {
+    showToast(currentLang === 'ar' ? 'تم سحب صلاحيات المسؤول منك' : 'Admin access forbidden', 'error');
+    if (currentUser) {
+      currentUser.role = 'customer';
+      localStorage.setItem('madar_user', JSON.stringify(currentUser));
+      updateAuthUI();
+    }
+    navigate('home');
+    return null;
+  }
   return res;
 }
 
@@ -2578,6 +2588,11 @@ async function syncUserProfile() {
       };
       localStorage.setItem('madar_user', JSON.stringify(currentUser));
       updateAuthUI();
+
+      if (currentRoute === 'admin' && currentUser.role !== 'admin') {
+        showToast(currentLang === 'ar' ? 'تم سحب صلاحيات المسؤول منك' : 'Admin permissions revoked', 'error');
+        navigate('home');
+      }
     }
   } catch (err) {
     console.error('Failed to sync user profile:', err);
@@ -2604,6 +2619,13 @@ async function init() {
     if (currentUser.role === 'admin') {
       checkUnreadNotifications();
       setInterval(checkUnreadNotifications, 30000); // Check every 30s
+
+      // Periodically verify if admin access is still valid (every 15s)
+      setInterval(() => {
+        if (currentRoute === 'admin') {
+          syncUserProfile();
+        }
+      }, 15000);
     }
   }
 
