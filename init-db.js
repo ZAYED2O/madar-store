@@ -40,8 +40,17 @@ db.serialize(async () => {
     rating REAL NOT NULL DEFAULT 5.0,
     reviews_count INTEGER NOT NULL DEFAULT 0,
     description_en TEXT NOT NULL,
-    description_ar TEXT NOT NULL
+    description_ar TEXT NOT NULL,
+    additional_images TEXT DEFAULT '[]'
   )`, err => { if (!err) console.log('✓ جدول المنتجات'); });
+
+  // 1b. Categories Table (Dynamic categories and collection images)
+  db.run(`CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name_en TEXT NOT NULL UNIQUE,
+    name_ar TEXT NOT NULL UNIQUE,
+    image_url TEXT NOT NULL DEFAULT 'assets/waffle_shirt_1.png'
+  )`, err => { if (!err) console.log('✓ جدول الأقسام'); });
 
   // 2. Users Table
   db.run(`CREATE TABLE IF NOT EXISTS users (
@@ -217,6 +226,21 @@ db.serialize(async () => {
   insertAnn.run('مجموعات جديدة كل موسم', 'New collections every season', 1, 2);
   insertAnn.run('مصنوع في مصر بأعلى معايير الجودة', 'Made in Egypt with the highest quality standards', 1, 3);
   insertAnn.finalize(() => console.log('✓ تم زرع الإعلانات'));
+
+  // Seed Categories
+  const starterCategories = [
+    { name_en: 'T-Shirts', name_ar: 'تيشرتات', image_url: 'assets/waffle_shirt_1.png' },
+    { name_en: 'Sweatpants', name_ar: 'بناطيل رياضية', image_url: 'assets/grey_sweatpants_1.png' },
+    { name_en: 'Outfits', name_ar: 'ملابس كاملة', image_url: 'assets/developer_hoodie_1.png' },
+    { name_en: 'Ringer Tees', name_ar: 'تيشرتات رينجر', image_url: 'assets/ringer_tee_1.png' },
+    { name_en: 'Tank Tops', name_ar: 'تيشرتات حمالات', image_url: 'assets/tank_top_1.png' },
+    { name_en: 'Knitted Wear', name_ar: 'تريكو ومحبوكات', image_url: 'assets/knitted_sweater_1.png' },
+    { name_en: 'Denim', name_ar: 'جينز ودنيم', image_url: 'assets/denim_jacket_1.png' },
+    { name_en: 'Striped Shirts', name_ar: 'قمصان مخططة', image_url: 'assets/striped_shirt_1.png' }
+  ];
+  const insertCategory = db.prepare(`INSERT OR IGNORE INTO categories (name_en, name_ar, image_url) VALUES (?,?,?)`);
+  starterCategories.forEach(c => insertCategory.run(c.name_en, c.name_ar, c.image_url));
+  insertCategory.finalize(() => console.log('✓ تم زرع الأقسام الافتراضية'));
 
   // Seed Contact Messages
   const insertMessage = db.prepare(`INSERT INTO contact_messages (name, email, subject, message) VALUES (?,?,?,?)`);

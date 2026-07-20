@@ -65,7 +65,36 @@ const db = {
  'ALTER TABLE orders ADD COLUMN customer_address TEXT',
  'ALTER TABLE orders ADD COLUMN customer_city TEXT',
  'ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT \'cod\'',
+ 'ALTER TABLE products ADD COLUMN additional_images TEXT DEFAULT \'[]\'',
 ].forEach(sql => client.execute(sql).catch(() => {}));
+
+// Ensure categories table exists
+client.execute(`CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name_en TEXT NOT NULL UNIQUE,
+  name_ar TEXT NOT NULL UNIQUE,
+  image_url TEXT NOT NULL DEFAULT 'assets/waffle_shirt_1.png'
+)`).then(() => {
+  db.get('SELECT COUNT(*) AS cnt FROM categories', [], (err, row) => {
+    if (!err && row && row.cnt === 0) {
+      const starterCategories = [
+        { name_en: 'T-Shirts', name_ar: 'تيشرتات', image_url: 'assets/waffle_shirt_1.png' },
+        { name_en: 'Sweatpants', name_ar: 'بناطيل رياضية', image_url: 'assets/grey_sweatpants_1.png' },
+        { name_en: 'Outfits', name_ar: 'ملابس كاملة', image_url: 'assets/developer_hoodie_1.png' },
+        { name_en: 'Ringer Tees', name_ar: 'تيشرتات رينجر', image_url: 'assets/ringer_tee_1.png' },
+        { name_en: 'Tank Tops', name_ar: 'تيشرتات حمالات', image_url: 'assets/tank_top_1.png' },
+        { name_en: 'Knitted Wear', name_ar: 'تريكو ومحبوكات', image_url: 'assets/knitted_sweater_1.png' },
+        { name_en: 'Denim', name_ar: 'جينز ودنيم', image_url: 'assets/denim_jacket_1.png' },
+        { name_en: 'Striped Shirts', name_ar: 'قمصان مخططة', image_url: 'assets/striped_shirt_1.png' }
+      ];
+      starterCategories.forEach(cat => {
+        db.run('INSERT INTO categories (name_en, name_ar, image_url) VALUES (?,?,?)', [cat.name_en, cat.name_ar, cat.image_url]);
+      });
+    }
+  });
+}).catch((err) => {
+  console.error('Error creating categories table:', err);
+});
 
 // Ensure notifications table exists
 client.execute(`CREATE TABLE IF NOT EXISTS notifications (
@@ -280,6 +309,13 @@ app.post('/api/products/:id/reviews', verifyToken, (req, res) => {
 function formatProduct(row) {
   let sizes = [];
   try { sizes = JSON.parse(row.sizes); } catch { sizes = row.sizes ? row.sizes.split(',') : []; }
+  let additionalImages = [];
+  try { additionalImages = JSON.parse(row.additional_images || '[]'); } catch { additionalImages = []; }
+  const images = [row.image_primary];
+  if (row.image_secondary) images.push(row.image_secondary);
+  additionalImages.forEach(img => {
+    if (img && !images.includes(img)) images.push(img);
+  });
   return {
     id: row.id,
     nameEn: row.name_en, nameAr: row.name_ar,
@@ -287,7 +323,7 @@ function formatProduct(row) {
     price: row.price, originalPrice: row.original_price,
     categoryEn: row.category_en, categoryAr: row.category_ar,
     badgeEn: row.badge_en, badgeAr: row.badge_ar,
-    images: [row.image_primary, row.image_secondary || row.image_primary],
+    images: images,
     sizes, lowStock: !!row.low_stock,
     rating: row.rating, reviewsCount: row.reviews_count,
     descriptionEn: row.description_en, descriptionAr: row.description_ar
@@ -594,13 +630,15 @@ app.put('/api/admin/orders/:id', verifyToken, requireAdmin, (req, res) => {
 
 // ─── ADMIN: Products CRUD ─────────────────────────────────────────────────────
 app.post('/api/admin/products', verifyToken, requireAdmin, (req, res) => {
-  const { nameEn, nameAr, handle, price, originalPrice, categoryEn, categoryAr, badgeEn, badgeAr, imagePrimary, imageSecondary, sizes, lowStock, descriptionEn, descriptionAr } = req.body;
+  const { nameEn, nameAr, handle, price, originalPrice, categoryEn, categoryAr, badgeEn, badgeAr, imagePrimary, imageSecondary, additionalImages, sizes, lowStock, descriptionEn, descriptionAr } = req.body;
   if (!nameEn || !nameAr || !price || !imagePrimary) return res.status(400).json({ error: 'الاسم والسعر والصورة مطلوبة' });
 
   const finalHandle = handle || nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'product';
   const sizesStr = Array.isArray(sizes) ? JSON.stringify(sizes) : sizes;
-  db.run(`INSERT INTO products (name_en,name_ar,handle,price,original_price,category_en,category_ar,badge_en,badge_ar,image_primary,image_secondary,sizes,low_stock,rating,reviews_count,description_en,description_ar) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,5.0,0,?,?)`,
-    [nameEn, nameAr, finalHandle, price, originalPrice||price, categoryEn||'T-Shirts', categoryAr||'تيشرتات', badgeEn||null, badgeAr||null, imagePrimary, imageSecondary||imagePrimary, sizesStr||'["M","L","XL"]', lowStock?1:0, descriptionEn||'', descriptionAr||''],
+  const additionalImagesStr = Array.isArray(additionalImages) ? JSON.stringify(additionalImages) : JSON.stringify([]);
+
+  db.run(`INSERT INTO products (name_en,name_ar,handle,price,original_price,category_en,category_ar,badge_en,badge_ar,image_primary,image_secondary,sizes,low_stock,rating,reviews_count,description_en,description_ar,additional_images) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,5.0,0,?,?,?)`,
+    [nameEn, nameAr, finalHandle, price, originalPrice||price, categoryEn||'T-Shirts', categoryAr||'تيشرتات', badgeEn||null, badgeAr||null, imagePrimary, imageSecondary||imagePrimary, sizesStr||'["M","L","XL"]', lowStock?1:0, descriptionEn||'', descriptionAr||'', additionalImagesStr],
     function(err) {
       if (err) return res.status(500).json({ error: 'خطأ في إضافة المنتج' });
       res.status(201).json({ success: true, productId: this.lastID });
@@ -608,11 +646,13 @@ app.post('/api/admin/products', verifyToken, requireAdmin, (req, res) => {
 });
 
 app.put('/api/admin/products/:id', verifyToken, requireAdmin, (req, res) => {
-  const { nameEn, nameAr, handle, price, originalPrice, categoryEn, categoryAr, badgeEn, badgeAr, imagePrimary, imageSecondary, sizes, lowStock, descriptionEn, descriptionAr } = req.body;
+  const { nameEn, nameAr, handle, price, originalPrice, categoryEn, categoryAr, badgeEn, badgeAr, imagePrimary, imageSecondary, additionalImages, sizes, lowStock, descriptionEn, descriptionAr } = req.body;
   const finalHandle = handle || (nameEn ? nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : 'product');
   const sizesStr = Array.isArray(sizes) ? JSON.stringify(sizes) : sizes;
-  db.run(`UPDATE products SET name_en=?,name_ar=?,handle=?,price=?,original_price=?,category_en=?,category_ar=?,badge_en=?,badge_ar=?,image_primary=?,image_secondary=?,sizes=?,low_stock=?,description_en=?,description_ar=? WHERE id=?`,
-    [nameEn, nameAr, finalHandle, price, originalPrice, categoryEn, categoryAr, badgeEn, badgeAr, imagePrimary, imageSecondary, sizesStr, lowStock?1:0, descriptionEn, descriptionAr, req.params.id],
+  const additionalImagesStr = Array.isArray(additionalImages) ? JSON.stringify(additionalImages) : JSON.stringify([]);
+
+  db.run(`UPDATE products SET name_en=?,name_ar=?,handle=?,price=?,original_price=?,category_en=?,category_ar=?,badge_en=?,badge_ar=?,image_primary=?,image_secondary=?,sizes=?,low_stock=?,description_en=?,description_ar=?,additional_images=? WHERE id=?`,
+    [nameEn, nameAr, finalHandle, price, originalPrice, categoryEn, categoryAr, badgeEn, badgeAr, imagePrimary, imageSecondary, sizesStr, lowStock?1:0, descriptionEn, descriptionAr, additionalImagesStr, req.params.id],
     err => {
       if (err) {
         console.error('Error updating product:', err);
@@ -626,6 +666,57 @@ app.delete('/api/admin/products/:id', verifyToken, requireAdmin, (req, res) => {
   db.run('DELETE FROM products WHERE id = ?', [req.params.id], err => {
     if (err) return res.status(500).json({ error: 'خطأ في حذف المنتج' });
     res.json({ success: true });
+  });
+});
+
+// ─── CATEGORIES API ───────────────────────────────────────────────────────────
+app.get('/api/categories', (req, res) => {
+  db.all('SELECT * FROM categories ORDER BY id ASC', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'خطأ في جلب الأقسام' });
+    res.json(rows);
+  });
+});
+
+app.post('/api/admin/categories', verifyToken, requireAdmin, (req, res) => {
+  const { nameEn, nameAr, imageUrl } = req.body;
+  if (!nameEn || !nameAr) return res.status(400).json({ error: 'الاسم باللغتين مطلوب' });
+  db.run('INSERT INTO categories (name_en, name_ar, image_url) VALUES (?,?,?)',
+    [nameEn.trim(), nameAr.trim(), imageUrl || 'assets/waffle_shirt_1.png'], function(err) {
+      if (err) return res.status(500).json({ error: 'القسم موجود بالفعل أو حدث خطأ' });
+      res.status(201).json({ success: true, id: this.lastID });
+    });
+});
+
+app.put('/api/admin/categories/:id', verifyToken, requireAdmin, (req, res) => {
+  const { nameEn, nameAr, imageUrl } = req.body;
+  const catId = req.params.id;
+  if (!nameEn || !nameAr) return res.status(400).json({ error: 'الاسم باللغتين مطلوب' });
+
+  db.get('SELECT * FROM categories WHERE id = ?', [catId], (err, oldCat) => {
+    if (err || !oldCat) return res.status(404).json({ error: 'القسم غير موجود' });
+
+    db.run('UPDATE categories SET name_en = ?, name_ar = ?, image_url = ? WHERE id = ?',
+      [nameEn.trim(), nameAr.trim(), imageUrl || oldCat.image_url, catId], function(err) {
+        if (err) return res.status(500).json({ error: 'فشل تحديث القسم' });
+
+        // Update products using the old category names
+        db.run('UPDATE products SET category_en = ? WHERE category_en = ?', [nameEn.trim(), oldCat.name_en]);
+        db.run('UPDATE products SET category_ar = ? WHERE category_ar = ?', [nameAr.trim(), oldCat.name_ar]);
+
+        res.json({ success: true });
+      });
+  });
+});
+
+app.delete('/api/admin/categories/:id', verifyToken, requireAdmin, (req, res) => {
+  const catId = req.params.id;
+  db.get('SELECT * FROM categories WHERE id = ?', [catId], (err, cat) => {
+    if (err || !cat) return res.status(404).json({ error: 'القسم غير موجود' });
+
+    db.run('DELETE FROM categories WHERE id = ?', [catId], function(err) {
+      if (err) return res.status(500).json({ error: 'فشل حذف القسم' });
+      res.json({ success: true });
+    });
   });
 });
 

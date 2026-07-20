@@ -61,6 +61,7 @@ const translations = {
     manageOrders: 'إدارة الطلبات', manageInventory: 'إدارة المنتجات', manageUsers: 'إدارة المستخدمين',
     manageMessages: 'الرسائل الواردة', manageContent: 'محتوى الموقع',
     manageAnnouncements: 'شريط الإعلانات', addAnnouncement: 'إضافة إعلان',
+    manageCategories: 'إدارة الأقسام', addCategory: 'إضافة قسم جديد', editCategory: 'تعديل القسم', categoryNameAr: 'اسم القسم (عربي)', categoryNameEn: 'اسم القسم (English)', categoryImage: 'صورة القسم / المجموعة',
     annTextAr: 'النص العربي', annTextEn: 'النص الإنجليزي',
     save: 'حفظ', active: 'نشط', order: 'الترتيب',
     replyMessage: 'الرد على الرسالة', replyText: 'نص الرد', send: 'إرسال الرد',
@@ -161,6 +162,7 @@ const translations = {
     manageOrders: 'Manage Orders', manageInventory: 'Manage Inventory', manageUsers: 'Manage Users',
     manageMessages: 'Inbox Messages', manageContent: 'Site Content',
     manageAnnouncements: 'Announcement Bar', addAnnouncement: 'Add Announcement',
+    manageCategories: 'Manage Categories', addCategory: 'Add Category', editCategory: 'Edit Category', categoryNameAr: 'Category Name (Arabic)', categoryNameEn: 'Category Name (English)', categoryImage: 'Category/Collection Image',
     annTextAr: 'Arabic Text', annTextEn: 'English Text',
     save: 'Save', active: 'Active', order: 'Order',
     replyMessage: 'Reply to Message', replyText: 'Reply Text', send: 'Send Reply',
@@ -1386,6 +1388,7 @@ async function loadAdminData() {
     { name: 'Orders', fn: loadAdminOrders },
     { name: 'Products', fn: loadAdminProducts },
     { name: 'Users', fn: loadAdminUsers },
+    { name: 'Categories', fn: loadAdminCategories },
     { name: 'CMS', fn: loadAdminCMS },
     { name: 'Messages', fn: loadAdminMessages },
     { name: 'Announcements', fn: loadAdminAnnouncements },
@@ -1646,6 +1649,172 @@ async function loadAdminCMS() {
     }
   } catch (e) {
     console.error('Failed to load admin CMS:', e);
+  }
+}
+
+// ─── DYNAMIC CATEGORIES & COLLECTIONS ─────────────────────────────────────────
+let adminCategoriesList = [];
+let editingCategoryId = null;
+
+async function loadAdminCategories() {
+  try {
+    const res = await apiFetch('/api/categories');
+    if (!res) return;
+    const cats = await res.json();
+    adminCategoriesList = cats;
+    const tbody = $('admin-categories-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    if (!cats.length) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:3rem">${currentLang === 'ar' ? 'لا توجد أقسام مضافة' : 'No categories found'}</td></tr>`;
+      return;
+    }
+    
+    cats.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><img src="${c.image_url}" class="admin-table-img" alt="${c.name_ar}" style="width: 50px; height: 50px; object-fit: cover;"></td>
+        <td style="font-weight:700;color:#fff">${c.name_ar}</td>
+        <td>${c.name_en}</td>
+        <td>
+          <div style="display:flex;gap:0.8rem">
+            <button class="btn secondary-btn btn-sm edit-cat-btn" data-id="${c.id}">${currentLang === 'ar' ? 'تعديل' : 'Edit'}</button>
+            <button class="btn danger-btn btn-sm delete-cat-btn" data-id="${c.id}">${currentLang === 'ar' ? 'حذف' : 'Delete'}</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    
+    tbody.querySelectorAll('.edit-cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const cat = adminCategoriesList.find(x => x.id == id);
+        if (cat) openCategoryForm(cat);
+      });
+    });
+    
+    tbody.querySelectorAll('.delete-cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        deleteCategory(id);
+      });
+    });
+  } catch (err) {
+    console.error('Failed to load categories in admin:', err);
+  }
+}
+
+function openCategoryForm(category = null) {
+  editingCategoryId = category?.id || null;
+  const wrapper = $('category-form-wrapper');
+  const titleEl = $('category-form-title');
+  if (!wrapper) return;
+  wrapper.classList.remove('hidden');
+  if (titleEl) titleEl.textContent = category ? (currentLang === 'ar' ? 'تعديل القسم' : 'Edit Category') : (currentLang === 'ar' ? 'إضافة قسم جديد' : 'Add New Category');
+  
+  if (category) {
+    $('cat-name-ar').value = category.name_ar || '';
+    $('cat-name-en').value = category.name_en || '';
+    $('cat-img-url').value = category.image_url || '';
+    $('cat-file-name').textContent = '';
+  } else {
+    $('category-form').reset();
+    $('cat-file-name').textContent = '';
+  }
+  wrapper.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function submitCategoryForm(e) {
+  e.preventDefault();
+  const nameAr = $('cat-name-ar').value.trim();
+  const nameEn = $('cat-name-en').value.trim();
+  const imageUrl = $('cat-img-url').value.trim();
+  
+  if (!nameAr || !nameEn || !imageUrl) {
+    showToast(currentLang === 'ar' ? 'يرجى ملء جميع الحقول' : 'Please fill all fields', 'error');
+    return;
+  }
+  
+  const body = { nameAr, nameEn, imageUrl };
+  const isEdit = !!editingCategoryId;
+  const url = isEdit ? `/api/admin/categories/${editingCategoryId}` : '/api/admin/categories';
+  const method = isEdit ? 'PUT' : 'POST';
+  
+  try {
+    const res = await apiFetch(url, { method, body: JSON.stringify(body) });
+    if (!res) return;
+    const data = await res.json();
+    if (res.ok) {
+      showToast(isEdit ? (currentLang === 'ar' ? 'تم تحديث القسم ✓' : 'Category updated ✓') : (currentLang === 'ar' ? 'تم إضافة القسم ✓' : 'Category added ✓'));
+      $('category-form-wrapper').classList.add('hidden');
+      $('category-form').reset();
+      editingCategoryId = null;
+      loadAdminCategories();
+    } else {
+      showToast(data.error || 'Operation failed', 'error');
+    }
+  } catch {
+    showToast(currentLang === 'ar' ? 'خطأ في الاتصال بالخادم' : 'Server error', 'error');
+  }
+}
+
+async function deleteCategory(id) {
+  if (!confirm(currentLang === 'ar' ? 'هل أنت متأكد من حذف هذا القسم؟ قد يؤدي هذا إلى تأثر المنتجات المرتبطة به.' : 'Are you sure you want to delete this category? This might affect products linked to it.')) return;
+  try {
+    const res = await apiFetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
+    if (!res) return;
+    if (res.ok) {
+      showToast(currentLang === 'ar' ? 'تم حذف القسم بنجاح' : 'Category deleted successfully');
+      loadAdminCategories();
+    } else {
+      const data = await res.json();
+      showToast(data.error || 'Delete failed', 'error');
+    }
+  } catch {
+    showToast(currentLang === 'ar' ? 'خطأ في الاتصال' : 'Connection error', 'error');
+  }
+}
+
+async function renderCollections() {
+  const grid = $('collections-grid');
+  if (!grid) return;
+  
+  try {
+    const res = await fetch('/api/categories');
+    const categories = await res.json();
+    
+    grid.innerHTML = '';
+    categories.forEach(cat => {
+      const name = currentLang === 'ar' ? cat.name_ar : cat.name_en;
+      const card = document.createElement('div');
+      card.className = 'collection-card';
+      card.dataset.cat = cat.name_ar;
+      card.dataset.catEn = cat.name_en;
+      
+      card.innerHTML = `
+        <div class="collection-image-wrapper">
+          <img src="${cat.image_url}" alt="${name}" loading="lazy">
+        </div>
+        <div class="collection-info">
+          <h3 class="collection-title">${name}</h3>
+          <span class="collection-link">
+            ${currentLang === 'ar' ? 'تسوق المجموعة' : 'Shop Collection'}
+            <i class="fa-solid ${currentLang === 'ar' ? 'fa-arrow-left' : 'fa-arrow-right'} fa-sm"></i>
+          </span>
+        </div>
+      `;
+      
+      card.addEventListener('click', () => {
+        filterState.categories = [cat.name_ar, cat.name_en];
+        navigate('shop');
+      });
+      
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    console.error('Failed to render collections:', err);
   }
 }
 
@@ -2078,7 +2247,82 @@ async function uploadImageFile(fileInput, textInput, labelElement) {
   }
 }
 
-function openProductForm(product = null) {
+async function populateCategoryDropdowns(selectedAr = '', selectedEn = '') {
+  try {
+    const res = await fetch('/api/categories');
+    const categories = await res.json();
+    
+    const arSelect = $('pf-category-ar');
+    const enSelect = $('pf-category-en');
+    
+    if (arSelect) {
+      arSelect.innerHTML = categories.map(c => `<option value="${c.name_ar}">${c.name_ar}</option>`).join('');
+      if (selectedAr) arSelect.value = selectedAr;
+    }
+    
+    if (enSelect) {
+      enSelect.innerHTML = categories.map(c => `<option value="${c.name_en}">${c.name_en}</option>`).join('');
+      if (selectedEn) enSelect.value = selectedEn;
+    }
+  } catch (err) {
+    console.error('Failed to populate categories dropdowns:', err);
+  }
+}
+
+function renderAdditionalImagesFormList(imagesArray) {
+  const container = $('pf-additional-images-list');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  imagesArray.forEach((imgUrl) => {
+    addAdditionalImageSlot(imgUrl);
+  });
+}
+
+function addAdditionalImageSlot(value = '') {
+  const container = $('pf-additional-images-list');
+  if (!container) return;
+  
+  const slotId = 'add-img-slot-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+  const div = document.createElement('div');
+  div.id = slotId;
+  div.style = "display: flex; align-items: center; gap: 1rem; background: var(--bg-1); padding: 1rem; border-radius: var(--r-sm); border: 1px solid var(--border);";
+  
+  div.innerHTML = `
+    <div style="width: 50px; height: 50px; border-radius: var(--r-sm); overflow: hidden; background: var(--bg-2); display: flex; align-items: center; justify-content: center;">
+      <img class="slot-preview-img" src="${value || 'assets/waffle_shirt_1.png'}" style="max-width: 100%; max-height: 100%; object-fit: cover;">
+    </div>
+    <input type="text" class="additional-img-input" style="flex: 1;" placeholder="assets/product_image.png" value="${value}" required>
+    <input type="file" class="slot-file-input" accept="image/*" style="display:none">
+    <button type="button" class="btn secondary-btn btn-sm upload-slot-btn"><i class="fa-solid fa-cloud-arrow-up"></i> رفع</button>
+    <button type="button" class="btn danger-btn btn-sm remove-slot-btn" style="padding: 0.6rem 1rem;"><i class="fa-regular fa-trash-can"></i></button>
+  `;
+  
+  const inputEl = div.querySelector('.additional-img-input');
+  const fileInputEl = div.querySelector('.slot-file-input');
+  const uploadBtn = div.querySelector('.upload-slot-btn');
+  const removeBtn = div.querySelector('.remove-slot-btn');
+  const previewImg = div.querySelector('.slot-preview-img');
+  
+  inputEl.addEventListener('input', () => {
+    previewImg.src = inputEl.value || 'assets/waffle_shirt_1.png';
+  });
+  
+  uploadBtn.addEventListener('click', () => fileInputEl.click());
+  fileInputEl.addEventListener('change', () => {
+    uploadImageFile(fileInputEl, inputEl, null).then(() => {
+      previewImg.src = inputEl.value;
+    });
+  });
+  
+  removeBtn.addEventListener('click', () => {
+    div.remove();
+  });
+  
+  container.appendChild(div);
+}
+
+async function openProductForm(product = null) {
   editingProductId = product?.id || null;
   const wrapper = $('product-form-wrapper');
   const titleEl = $('product-form-title');
@@ -2086,21 +2330,23 @@ function openProductForm(product = null) {
   wrapper.classList.remove('hidden');
   if (titleEl) titleEl.textContent = product ? t('editProduct') : t('addProduct');
 
+  await populateCategoryDropdowns(product?.categoryAr, product?.categoryEn);
+
   if (product) {
     $('pf-name-en').value = product.nameEn || '';
     $('pf-name-ar').value = product.nameAr || '';
     $('pf-price').value = product.price || '';
     $('pf-original-price').value = product.originalPrice || '';
-    $('pf-category-ar').value = product.categoryAr || 'تيشرتات';
-    $('pf-category-en').value = product.categoryEn || 'T-Shirts';
     $('pf-badge-en').value = product.badgeEn || '';
     $('pf-badge-ar').value = product.badgeAr || '';
     $('pf-img-primary').value = product.images?.[0] || '';
     $('pf-img-secondary').value = product.images?.[1] || '';
     $('pf-desc-en').value = product.descriptionEn || '';
     $('pf-desc-ar').value = product.descriptionAr || '';
+    renderAdditionalImagesFormList(product.images ? product.images.slice(2) : []);
   } else {
     $('product-form').reset();
+    renderAdditionalImagesFormList([]);
   }
 
   wrapper.scrollIntoView({ behavior: 'smooth' });
@@ -2108,6 +2354,12 @@ function openProductForm(product = null) {
 
 async function submitProductForm(e) {
   e.preventDefault();
+  const additionalImages = [];
+  document.querySelectorAll('#pf-additional-images-list .additional-img-input').forEach(input => {
+    const val = input.value.trim();
+    if (val) additionalImages.push(val);
+  });
+
   const body = {
     nameEn: $('pf-name-en').value.trim(),
     nameAr: $('pf-name-ar').value.trim(),
@@ -2119,6 +2371,7 @@ async function submitProductForm(e) {
     badgeAr: $('pf-badge-ar').value.trim() || null,
     imagePrimary: $('pf-img-primary').value.trim(),
     imageSecondary: $('pf-img-secondary').value.trim() || null,
+    additionalImages: additionalImages,
     descriptionEn: $('pf-desc-en').value.trim(),
     descriptionAr: $('pf-desc-ar').value.trim(),
     sizes: ["M","L","XL","2XL"], lowStock: false
@@ -2213,6 +2466,8 @@ function setupAdminTabs() {
       $(`admin-tab-${tab}`)?.classList.remove('hidden');
       if (tab === 'notifications') {
         loadAdminNotifications();
+      } else if (tab === 'categories') {
+        loadAdminCategories();
       }
     });
   });
@@ -2307,6 +2562,7 @@ async function init() {
   // Load CMS content and then apply translations
   await fetchCMSContent();
   applyTranslations();
+  await renderCollections();
 
   // Router: read hash
   const hash = window.location.hash.replace('#', '') || 'home';
@@ -2326,6 +2582,7 @@ async function init() {
     currentLang = currentLang === 'ar' ? 'en' : 'ar';
     localStorage.setItem('madar_lang', currentLang);
     applyTranslations();
+    renderCollections();
     if (currentRoute === 'shop') renderShopProducts();
     else if (currentRoute === 'home') loadHomeProducts();
     else if (currentRoute === 'admin') loadAdminData();
@@ -2418,6 +2675,24 @@ async function init() {
   $('pf-file-secondary')?.addEventListener('change', () => uploadImageFile(
     $('pf-file-secondary'), $('pf-img-secondary'), $('pf-file-secondary-name')
   ));
+
+  // ── Categories Admin ──
+  $('add-category-btn')?.addEventListener('click', () => openCategoryForm(null));
+  $('category-form')?.addEventListener('submit', submitCategoryForm);
+  $('cat-cancel-btn')?.addEventListener('click', () => { $('category-form-wrapper').classList.add('hidden'); $('category-form').reset(); editingCategoryId = null; });
+  
+  $('cat-file-input')?.addEventListener('change', () => {
+    const fileInput = $('cat-file-input');
+    const textInput = $('cat-img-url');
+    const nameSpan = $('cat-file-name');
+    if (fileInput.files[0]) {
+      nameSpan.textContent = fileInput.files[0].name;
+      uploadImageFile(fileInput, textInput, nameSpan);
+    }
+  });
+
+  // ── Product Additional Image Slots ──
+  $('pf-add-img-slot-btn')?.addEventListener('click', () => addAdditionalImageSlot(''));
 
   // ── Reply Modal ──
   $('reply-submit-btn')?.addEventListener('click', submitReply);
