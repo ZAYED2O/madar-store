@@ -663,11 +663,14 @@
               </div>
             </div>
             <div class="chat-messages-log" id="user-chat-messages">
-              <div style="text-align:center;padding:3rem;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;margin-bottom:1rem;display:block"></i>جارٍ تحميل المحادثة...</div>
+              <div class="chat-empty-state">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <p>جارٍ تحميل المحادثة...</p>
+              </div>
             </div>
             <form id="user-chat-form" class="chat-input-panel">
               <input type="text" id="user-chat-input" class="chat-input-field" placeholder="اكتب رسالتك هنا..." required autocomplete="off">
-              <button type="submit" class="btn primary-btn chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+              <button type="submit" class="chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
             </form>
           </div>
         </div>
