@@ -2557,6 +2557,33 @@ function setupAccordions() {
   });
 }
 
+async function syncUserProfile() {
+  if (!authToken) return;
+  try {
+    const res = await fetch('/api/profile', {
+      headers: { 'x-auth-token': authToken }
+    });
+    if (res.status === 200) {
+      const freshUser = await res.json();
+      currentUser = {
+        id: freshUser.id,
+        name: freshUser.name,
+        email: freshUser.email,
+        role: freshUser.role,
+        avatarInitials: freshUser.avatar_initials || freshUser.name.charAt(0),
+        avatarUrl: freshUser.avatar_url || null,
+        phone: freshUser.phone,
+        address: freshUser.address,
+        points: freshUser.points || 0
+      };
+      localStorage.setItem('madar_user', JSON.stringify(currentUser));
+      updateAuthUI();
+    }
+  } catch (err) {
+    console.error('Failed to sync user profile:', err);
+  }
+}
+
 // ─── MAIN INIT ────────────────────────────────────────────────────────────────
 async function init() {
   // Load CMS content and then apply translations
@@ -2567,6 +2594,9 @@ async function init() {
   // Router: read hash
   const hash = window.location.hash.replace('#', '') || 'home';
   navigate(hash);
+
+  // Sync profile data dynamically on load
+  await syncUserProfile();
 
   // Auth state
   if (authToken && currentUser) {
