@@ -2849,12 +2849,12 @@ async function loadAdminShipping() {
     data.governorates.forEach(g => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td style="font-weight:700;color:#fff">${g.name_ar}</td>
+        <td style="font-weight:700;color:var(--text-primary,#111)">${g.name_ar}</td>
         <td style="color:var(--text-muted)">${g.name_en}</td>
         <td>
           <div style="display:flex;align-items:center;gap:0.8rem">
             <input type="number" class="gov-cost-input" data-id="${g.id}" value="${g.shipping_cost}" min="0" step="5"
-              style="width:9rem;padding:0.6rem;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg-1);color:#fff;font-size:1.3rem;text-align:center">
+              style="width:9rem;padding:0.6rem;border:1px solid var(--border);border-radius:var(--r-sm);background:#ffffff;color:#111111;font-weight:700;font-size:1.35rem;text-align:center">
             <button class="btn primary-btn btn-sm save-gov-cost-btn" data-id="${g.id}">
               <i class="fa-solid fa-floppy-disk"></i>
             </button>
