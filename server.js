@@ -211,6 +211,8 @@ client.execute(`CREATE TABLE IF NOT EXISTS reviews (
   });
 }).catch((err) => {
   console.error('Error creating reviews table:', err);
+});
+
 // Ensure size guide keys exist in site_content table
 client.execute(`CREATE TABLE IF NOT EXISTS site_content (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
