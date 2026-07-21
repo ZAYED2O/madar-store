@@ -429,16 +429,31 @@ app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'البريد وكلمة المرور مطلوبان' });
 
-  db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
-    if (err || !user) return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' });
+  db.get('SELECT * FROM users WHERE LOWER(email) = LOWER(?)', [email.trim()], async (err, user) => {
+    if (err) {
+      console.error('Login DB error:', err.message);
+      return res.status(500).json({ error: 'خطأ في الخادم' });
+    }
+    if (!user) {
+      console.log('Login failed: user not found for email:', email);
+      return res.status(401).json({ error: 'البريد الإلكتروني غير مسجل' });
+    }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'كلمة المرور غير صحيحة' });
+    try {
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) {
+        console.log('Login failed: wrong password for:', email);
+        return res.status(401).json({ error: 'كلمة المرور غير صحيحة' });
+      }
+    } catch (bcryptErr) {
+      console.error('bcrypt compare error:', bcryptErr.message, 'hash:', user.password_hash?.substring(0, 20));
+      return res.status(500).json({ error: 'خطأ في التحقق من كلمة المرور' });
+    }
 
     const token = jwt.sign(
       { id: user.id, name: user.name, email: user.email, role: user.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.json({
@@ -447,6 +462,22 @@ app.post('/api/login', (req, res) => {
     });
   });
 });
+
+// ─── ADMIN: Reset user password ───────────────────────────────────────────────
+app.put('/api/admin/users/:id/reset-password', verifyToken, requireAdmin, async (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
+  }
+  const hash = await bcrypt.hash(newPassword, 10);
+  db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hash, req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: 'خطأ في إعادة تعيين كلمة المرور' });
+    if (this.changes === 0) return res.status(404).json({ error: 'المستخدم غير موجود' });
+    res.json({ success: true, message: 'تم إعادة تعيين كلمة المرور بنجاح' });
+  });
+});
+
+
 
 // ─── AUTH: Logout ─────────────────────────────────────────────────────────────
 app.post('/api/logout', verifyToken, (req, res) => {
