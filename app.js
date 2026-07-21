@@ -747,12 +747,22 @@ function renderCartPage() {
     `;
     list.appendChild(row);
   });
-  const shipping = sub >= 1500 ? 0 : 80;
-  const total = sub + shipping;
+  // Use cached shipping data for cart page
+  const threshold = shippingData.freeShippingThreshold;
+  // Default shipping for cart page display (no governorate selected yet)
+  const defaultShipping = sub >= threshold ? 0 : (shippingData.governorates.length > 0 ? Math.min(...shippingData.governorates.map(g => g.shipping_cost)) : 60);
   const cpSub = $('cp-subtotal'), cpShip = $('cp-shipping'), cpTotal = $('cp-total');
   if (cpSub) cpSub.textContent = formatCurrency(sub);
-  if (cpShip) cpShip.textContent = shipping === 0 ? (currentLang === 'ar' ? 'مجاني' : 'Free') : formatCurrency(shipping);
-  if (cpTotal) cpTotal.textContent = formatCurrency(total);
+  if (cpShip) {
+    if (sub >= threshold && threshold > 0) {
+      cpShip.textContent = currentLang === 'ar' ? 'مجاني 🎉' : 'Free 🎉';
+      cpShip.style.color = '#22c55e';
+    } else {
+      cpShip.textContent = currentLang === 'ar' ? 'يُحدَّد حسب المحافظة' : 'Based on governorate';
+      cpShip.style.color = '';
+    }
+  }
+  if (cpTotal) cpTotal.textContent = sub >= threshold && threshold > 0 ? formatCurrency(sub) : formatCurrency(sub) + (currentLang === 'ar' ? ' + شحن' : ' + shipping');
 
   list.addEventListener('click', e => {
     const btn = e.target.closest('[data-idx]');
@@ -769,6 +779,64 @@ function renderCartPage() {
 }
 
 // ─── CHECKOUT ─────────────────────────────────────────────────────────────────
+async function loadShippingData() {
+  try {
+    const res = await fetch('/api/shipping');
+    if (res.ok) {
+      shippingData = await res.json();
+    }
+  } catch (e) {
+    console.error('Failed to load shipping data:', e);
+  }
+}
+
+function populateCheckoutCityDropdown() {
+  const select = $('checkout-city');
+  if (!select) return;
+  const placeholder = currentLang === 'ar' ? '-- اختر المحافظة --' : '-- Select Governorate --';
+  select.innerHTML = `<option value="">${placeholder}</option>`;
+  shippingData.governorates.forEach(g => {
+    const name = currentLang === 'ar' ? g.name_ar : g.name_en;
+    const opt = document.createElement('option');
+    opt.value = g.name_ar; // always store Arabic name as value
+    opt.textContent = `${g.name_ar} — ${formatCurrency(g.shipping_cost)}`;
+    opt.dataset.cost = g.shipping_cost;
+    opt.dataset.nameEn = g.name_en;
+    select.appendChild(opt);
+  });
+}
+
+function updateCheckoutShippingPreview() {
+  const select = $('checkout-city');
+  const preview = $('checkout-shipping-preview');
+  const costDisplay = $('checkout-shipping-cost-display');
+  const totalDisplay = $('checkout-total-display');
+  const freeNote = $('checkout-free-shipping-note');
+  if (!select || !preview) return;
+
+  const sub = cart.reduce((acc, c) => acc + c.price * c.qty, 0);
+  const selectedOpt = select.options[select.selectedIndex];
+  const govCost = selectedOpt?.dataset?.cost ? parseFloat(selectedOpt.dataset.cost) : null;
+  const threshold = shippingData.freeShippingThreshold;
+
+  if (!select.value) {
+    preview.style.display = 'none';
+    return;
+  }
+
+  preview.style.display = 'block';
+  const isFree = threshold > 0 && sub >= threshold;
+  const finalShipping = isFree ? 0 : (govCost !== null ? govCost : 60);
+  const total = sub + finalShipping;
+
+  if (costDisplay) {
+    costDisplay.textContent = isFree ? (currentLang === 'ar' ? 'مجاني 🎉' : 'Free 🎉') : formatCurrency(finalShipping);
+    costDisplay.style.color = isFree ? '#22c55e' : '';
+  }
+  if (totalDisplay) totalDisplay.textContent = formatCurrency(total);
+  if (freeNote) freeNote.style.display = isFree ? 'block' : 'none';
+}
+
 async function processCheckout() {
   if (cart.length === 0) { showToast(currentLang === 'ar' ? 'السلة فارغة' : 'Cart is empty', 'error'); return; }
   
@@ -779,21 +847,48 @@ async function processCheckout() {
     openModal('account-modal');
     return;
   }
-  
+
+  // Load shipping data if not loaded
+  if (shippingData.governorates.length === 0) {
+    await loadShippingData();
+  }
+
+  // Populate city dropdown
+  populateCheckoutCityDropdown();
+
   // Pre-fill fields if user is logged in
   if ($('checkout-name')) $('checkout-name').value = currentUser.name || '';
   if ($('checkout-phone')) $('checkout-phone').value = currentUser.phone || '';
   if ($('checkout-address')) $('checkout-address').value = currentUser.address || '';
-  if ($('checkout-city')) $('checkout-city').value = currentUser.city || '';
   
   // Set the note in the form from the note field in the cart if any
   if ($('checkout-notes') && $('order-note-field')) {
     $('checkout-notes').value = $('order-note-field').value || '';
   }
 
-  // Handle Payment options
+  // Wire the city select to update shipping preview
+  const citySelect = $('checkout-city');
+  if (citySelect) {
+    citySelect.onchange = () => {
+      updateCheckoutShippingPreview();
+      updateCheckoutPointsHint();
+    };
+  }
+
+  updateCheckoutPointsHint();
+
+  // Open the checkout details modal!
+  openModal('checkout-info-modal');
+}
+
+function updateCheckoutPointsHint() {
   const sub = cart.reduce((acc, c) => acc + c.price * c.qty, 0);
-  const shipping = sub >= 1500 ? 0 : 80;
+  const select = $('checkout-city');
+  const selectedOpt = select?.options[select.selectedIndex];
+  const govCost = selectedOpt?.dataset?.cost ? parseFloat(selectedOpt.dataset.cost) : 60;
+  const threshold = shippingData.freeShippingThreshold;
+  const isFree = threshold > 0 && sub >= threshold;
+  const shipping = isFree ? 0 : govCost;
   const total = sub + shipping;
 
   const paymentSection = $('checkout-payment-section');
@@ -806,13 +901,11 @@ async function processCheckout() {
 
   if (currentUser && currentUser.points > 0) {
     if (paymentSection) paymentSection.style.display = 'block';
-    
     if (pointsHint) {
-      pointsHint.textContent = currentLang === 'ar' 
-        ? `رصيدك الحالي: ${currentUser.points} نقطة (تكلفة الطلب: ${total} نقطة)` 
+      pointsHint.textContent = currentLang === 'ar'
+        ? `رصيدك الحالي: ${currentUser.points} نقطة (تكلفة الطلب: ${total} نقطة)`
         : `Your balance: ${currentUser.points} points (Order cost: ${total} points)`;
     }
-
     if (currentUser.points < total) {
       if (pointsRadio) {
         pointsRadio.disabled = true;
@@ -832,9 +925,6 @@ async function processCheckout() {
   } else {
     if (paymentSection) paymentSection.style.display = 'none';
   }
-
-  // Open the checkout details modal!
-  openModal('checkout-info-modal');
 }
 
 async function submitOrder() {
@@ -842,7 +932,8 @@ async function submitOrder() {
   
   const customerName = $('checkout-name').value.trim();
   const customerPhone = $('checkout-phone').value.trim();
-  const customerCity = $('checkout-city').value.trim();
+  const citySelect = $('checkout-city');
+  const customerCity = citySelect?.value?.trim() || '';
   const customerAddress = $('checkout-address').value.trim();
   const note = $('checkout-notes').value.trim();
 
@@ -852,7 +943,12 @@ async function submitOrder() {
   }
 
   const sub = cart.reduce((acc, c) => acc + c.price * c.qty, 0);
-  const shipping = sub >= 1500 ? 0 : 80;
+  // Calculate shipping based on selected governorate
+  const selectedOpt = citySelect?.options[citySelect.selectedIndex];
+  const govCost = selectedOpt?.dataset?.cost ? parseFloat(selectedOpt.dataset.cost) : 60;
+  const threshold = shippingData.freeShippingThreshold;
+  const isFree = threshold > 0 && sub >= threshold;
+  const shipping = isFree ? 0 : govCost;
   const total = sub + shipping;
 
   const paymentMethodEl = document.querySelector('input[name="payment_method"]:checked');
@@ -2719,10 +2815,137 @@ function setupAdminTabs() {
         loadAdminCategories();
       } else if (tab === 'messages') {
         loadAdminChats();
+      } else if (tab === 'shipping') {
+        loadAdminShipping();
       }
     });
   });
   $('admin-clear-notifs-btn')?.addEventListener('click', markAllNotificationsRead);
+}
+
+// ─── ADMIN: Shipping Management ───────────────────────────────────────────────
+let editingGovId = null;
+
+async function loadAdminShipping() {
+  try {
+    const res = await apiFetch('/api/admin/shipping');
+    if (!res) return;
+    const data = await res.json();
+    
+    // Populate threshold input
+    const thresholdInput = $('free-shipping-threshold-input');
+    if (thresholdInput) thresholdInput.value = data.freeShippingThreshold;
+
+    // Render governorates table
+    const tbody = $('admin-shipping-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!data.governorates || !data.governorates.length) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:3rem">لا توجد محافظات</td></tr>`;
+      return;
+    }
+
+    data.governorates.forEach(g => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-weight:700;color:#fff">${g.name_ar}</td>
+        <td style="color:var(--text-muted)">${g.name_en}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:0.8rem">
+            <input type="number" class="gov-cost-input" data-id="${g.id}" value="${g.shipping_cost}" min="0" step="5"
+              style="width:9rem;padding:0.6rem;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg-1);color:#fff;font-size:1.3rem;text-align:center">
+            <button class="btn primary-btn btn-sm save-gov-cost-btn" data-id="${g.id}">
+              <i class="fa-solid fa-floppy-disk"></i>
+            </button>
+          </div>
+        </td>
+        <td>
+          <button class="btn danger-btn btn-sm delete-gov-btn" data-id="${g.id}">
+            <i class="fa-regular fa-trash-can"></i> حذف
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Save individual governorate cost
+    tbody.querySelectorAll('.save-gov-cost-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const input = tbody.querySelector(`.gov-cost-input[data-id="${id}"]`);
+        const cost = parseFloat(input?.value);
+        if (isNaN(cost)) return;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+          const res = await apiFetch(`/api/admin/shipping/governorate/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ shipping_cost: cost })
+          });
+          if (!res) return;
+          const data = await res.json();
+          if (data.success) {
+            showToast(currentLang === 'ar' ? 'تم حفظ سعر الشحن ✓' : 'Shipping cost saved ✓');
+            // Update cache
+            const gov = shippingData.governorates.find(g => g.id == id);
+            if (gov) gov.shipping_cost = cost;
+          } else showToast(data.error || 'فشل الحفظ', 'error');
+        } catch { showToast('خطأ في الاتصال', 'error'); }
+        finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>';
+        }
+      });
+    });
+
+    // Delete governorate
+    tbody.querySelectorAll('.delete-gov-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        if (!confirm(currentLang === 'ar' ? 'هل أنت متأكد من حذف هذه المحافظة؟' : 'Delete this governorate?')) return;
+        try {
+          const res = await apiFetch(`/api/admin/shipping/governorate/${id}`, { method: 'DELETE' });
+          if (!res) return;
+          const data = await res.json();
+          if (data.success) {
+            showToast(currentLang === 'ar' ? 'تم الحذف' : 'Deleted');
+            loadAdminShipping();
+            await loadShippingData();
+          } else showToast(data.error || 'فشل الحذف', 'error');
+        } catch { showToast('خطأ في الاتصال', 'error'); }
+      });
+    });
+
+  } catch (err) {
+    console.error('Failed to load admin shipping:', err);
+  }
+}
+
+async function submitGovForm(e) {
+  e.preventDefault();
+  const nameAr = $('gf-name-ar').value.trim();
+  const nameEn = $('gf-name-en').value.trim();
+  const cost = parseFloat($('gf-cost').value);
+  if (!nameAr || !nameEn || isNaN(cost)) {
+    showToast(currentLang === 'ar' ? 'يرجى ملء جميع الحقول' : 'Fill all fields', 'error');
+    return;
+  }
+  try {
+    const res = await apiFetch('/api/admin/shipping/governorate', {
+      method: 'POST',
+      body: JSON.stringify({ name_ar: nameAr, name_en: nameEn, shipping_cost: cost })
+    });
+    if (!res) return;
+    const data = await res.json();
+    if (data.success) {
+      showToast(currentLang === 'ar' ? 'تمت الإضافة ✓' : 'Added ✓');
+      $('gov-form-wrapper').classList.add('hidden');
+      $('gov-form').reset();
+      loadAdminShipping();
+      await loadShippingData();
+    } else showToast(data.error || 'فشل الحفظ', 'error');
+  } catch { showToast('خطأ في الاتصال', 'error'); }
 }
 
 // ─── PROFILE TABS ─────────────────────────────────────────────────────────────
@@ -2839,6 +3062,8 @@ async function init() {
   await fetchCMSContent();
   applyTranslations();
   await renderCollections();
+  // Load shipping data in background (no await, just fire)
+  loadShippingData();
 
   // Router: read hash
   const hash = window.location.hash.replace('#', '') || 'home';
@@ -2987,6 +3212,40 @@ async function init() {
   $('add-ann-btn')?.addEventListener('click', () => openAnnForm(null));
   $('ann-form')?.addEventListener('submit', submitAnnForm);
   $('af-cancel-btn')?.addEventListener('click', () => { $('ann-form-wrapper').classList.add('hidden'); $('ann-form').reset(); editingAnnId = null; });
+
+  // ── Shipping Admin ──
+  $('add-gov-btn')?.addEventListener('click', () => {
+    const wrapper = $('gov-form-wrapper');
+    if (wrapper) wrapper.classList.toggle('hidden');
+    $('gf-name-ar').value = '';
+    $('gf-name-en').value = '';
+    $('gf-cost').value = '';
+  });
+  $('gov-form')?.addEventListener('submit', submitGovForm);
+  $('gf-cancel-btn')?.addEventListener('click', () => {
+    $('gov-form-wrapper')?.classList.add('hidden');
+    $('gov-form')?.reset();
+  });
+  $('save-threshold-btn')?.addEventListener('click', async () => {
+    const val = parseFloat($('free-shipping-threshold-input')?.value);
+    if (isNaN(val)) { showToast(currentLang === 'ar' ? 'أدخل قيمة صحيحة' : 'Enter a valid value', 'error'); return; }
+    const btn = $('save-threshold-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    try {
+      const res = await apiFetch('/api/admin/shipping/config', {
+        method: 'PUT',
+        body: JSON.stringify({ freeShippingThreshold: val })
+      });
+      if (!res) return;
+      const data = await res.json();
+      if (data.success) {
+        shippingData.freeShippingThreshold = val;
+        showToast(currentLang === 'ar' ? 'تم حفظ إعداد الشحن المجاني ✓' : 'Free shipping threshold saved ✓');
+      } else showToast(data.error || 'فشل الحفظ', 'error');
+    } catch { showToast('خطأ في الاتصال', 'error'); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ'; }
+  });
 
   // ── Filter toggle ──
   $('filter-toggle-btn')?.addEventListener('click', () => openDrawer('filter-drawer'));

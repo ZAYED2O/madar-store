@@ -111,6 +111,65 @@ client.execute(`CREATE TABLE IF NOT EXISTS notifications (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`).catch(() => {});
 
+// Ensure shipping_settings table exists with Egyptian governorates
+client.execute(`CREATE TABLE IF NOT EXISTS shipping_settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  key_name TEXT NOT NULL UNIQUE,
+  value TEXT NOT NULL
+)`).then(() => {
+  // Insert default free shipping threshold if not exists
+  client.execute(`INSERT OR IGNORE INTO shipping_settings (key_name, value) VALUES ('free_shipping_threshold', '1500')`).catch(() => {});
+}).catch(() => {});
+
+client.execute(`CREATE TABLE IF NOT EXISTS shipping_governorates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name_ar TEXT NOT NULL UNIQUE,
+  name_en TEXT NOT NULL UNIQUE,
+  shipping_cost REAL NOT NULL DEFAULT 60
+)`).then(() => {
+  // Seed default Egyptian governorates if table is empty
+  client.execute(`SELECT COUNT(*) as cnt FROM shipping_governorates`).then(r => {
+    const cnt = r.rows[0]?.cnt;
+    if (cnt === 0 || cnt === '0') {
+      const governorates = [
+        { ar: 'القاهرة', en: 'Cairo', cost: 50 },
+        { ar: 'الجيزة', en: 'Giza', cost: 50 },
+        { ar: 'الإسكندرية', en: 'Alexandria', cost: 60 },
+        { ar: 'الدقهلية', en: 'Dakahlia', cost: 70 },
+        { ar: 'البحر الأحمر', en: 'Red Sea', cost: 90 },
+        { ar: 'البحيرة', en: 'Beheira', cost: 70 },
+        { ar: 'الفيوم', en: 'Faiyum', cost: 70 },
+        { ar: 'الغربية', en: 'Gharbia', cost: 70 },
+        { ar: 'الإسماعيلية', en: 'Ismailia', cost: 70 },
+        { ar: 'المنوفية', en: 'Menofia', cost: 70 },
+        { ar: 'المنيا', en: 'Minya', cost: 75 },
+        { ar: 'القليوبية', en: 'Qalyubia', cost: 55 },
+        { ar: 'الوادي الجديد', en: 'New Valley', cost: 100 },
+        { ar: 'الشرقية', en: 'Sharkia', cost: 70 },
+        { ar: 'سوهاج', en: 'Sohag', cost: 80 },
+        { ar: 'جنوب سيناء', en: 'South Sinai', cost: 95 },
+        { ar: 'كفر الشيخ', en: 'Kafr El Sheikh', cost: 70 },
+        { ar: 'مطروح', en: 'Matrouh', cost: 95 },
+        { ar: 'الأقصر', en: 'Luxor', cost: 85 },
+        { ar: 'قنا', en: 'Qena', cost: 85 },
+        { ar: 'شمال سيناء', en: 'North Sinai', cost: 95 },
+        { ar: 'بورسعيد', en: 'Port Said', cost: 75 },
+        { ar: 'دمياط', en: 'Damietta', cost: 75 },
+        { ar: 'أسوان', en: 'Aswan', cost: 90 },
+        { ar: 'أسيوط', en: 'Asyut', cost: 80 },
+        { ar: 'بني سويف', en: 'Beni Suef', cost: 70 },
+        { ar: 'السويس', en: 'Suez', cost: 75 }
+      ];
+      governorates.forEach(g => {
+        client.execute({
+          sql: `INSERT OR IGNORE INTO shipping_governorates (name_ar, name_en, shipping_cost) VALUES (?,?,?)`,
+          args: [g.ar, g.en, g.cost]
+        }).catch(() => {});
+      });
+    }
+  }).catch(() => {});
+}).catch(() => {});
+
 // Ensure reviews table exists
 client.execute(`CREATE TABLE IF NOT EXISTS reviews (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -998,6 +1057,79 @@ app.put('/api/admin/notifications/read-all', verifyToken, requireAdmin, (req, re
     if (err) return res.status(500).json({ error: 'خطأ في تحديث الإشعارات' });
     res.json({ success: true });
   });
+});
+
+// ─── SHIPPING: Public get all governorates + config ──────────────────────────
+app.get('/api/shipping', (req, res) => {
+  db.all('SELECT * FROM shipping_governorates ORDER BY name_ar ASC', [], (err, govs) => {
+    if (err) return res.status(500).json({ error: 'خطأ في جلب بيانات الشحن' });
+    db.get("SELECT value FROM shipping_settings WHERE key_name = 'free_shipping_threshold'", [], (err2, row) => {
+      res.json({
+        governorates: govs,
+        freeShippingThreshold: row ? parseFloat(row.value) : 1500
+      });
+    });
+  });
+});
+
+// ─── ADMIN: Shipping Management ──────────────────────────────────────────────
+// Get all governorates + config
+app.get('/api/admin/shipping', verifyToken, requireAdmin, (req, res) => {
+  db.all('SELECT * FROM shipping_governorates ORDER BY name_ar ASC', [], (err, govs) => {
+    if (err) return res.status(500).json({ error: 'خطأ في جلب المحافظات' });
+    db.get("SELECT value FROM shipping_settings WHERE key_name = 'free_shipping_threshold'", [], (err2, row) => {
+      res.json({
+        governorates: govs,
+        freeShippingThreshold: row ? parseFloat(row.value) : 1500
+      });
+    });
+  });
+});
+
+// Update governorate shipping cost
+app.put('/api/admin/shipping/governorate/:id', verifyToken, requireAdmin, (req, res) => {
+  const { shipping_cost } = req.body;
+  if (shipping_cost === undefined || isNaN(parseFloat(shipping_cost))) {
+    return res.status(400).json({ error: 'سعر الشحن غير صالح' });
+  }
+  db.run('UPDATE shipping_governorates SET shipping_cost = ? WHERE id = ?',
+    [parseFloat(shipping_cost), req.params.id], function(err) {
+      if (err) return res.status(500).json({ error: 'خطأ في التحديث' });
+      if (this.changes === 0) return res.status(404).json({ error: 'المحافظة غير موجودة' });
+      res.json({ success: true });
+    });
+});
+
+// Add new governorate
+app.post('/api/admin/shipping/governorate', verifyToken, requireAdmin, (req, res) => {
+  const { name_ar, name_en, shipping_cost } = req.body;
+  if (!name_ar || !name_en) return res.status(400).json({ error: 'الاسم مطلوب بالعربي والإنجليزي' });
+  db.run('INSERT INTO shipping_governorates (name_ar, name_en, shipping_cost) VALUES (?,?,?)',
+    [name_ar.trim(), name_en.trim(), parseFloat(shipping_cost) || 60], function(err) {
+      if (err) return res.status(500).json({ error: 'المحافظة موجودة بالفعل أو حدث خطأ' });
+      res.status(201).json({ success: true, id: this.lastID });
+    });
+});
+
+// Delete governorate
+app.delete('/api/admin/shipping/governorate/:id', verifyToken, requireAdmin, (req, res) => {
+  db.run('DELETE FROM shipping_governorates WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: 'خطأ في الحذف' });
+    res.json({ success: true });
+  });
+});
+
+// Update free shipping threshold
+app.put('/api/admin/shipping/config', verifyToken, requireAdmin, (req, res) => {
+  const { freeShippingThreshold } = req.body;
+  if (freeShippingThreshold === undefined || isNaN(parseFloat(freeShippingThreshold))) {
+    return res.status(400).json({ error: 'قيمة الشحن المجاني غير صالحة' });
+  }
+  db.run("INSERT OR REPLACE INTO shipping_settings (key_name, value) VALUES ('free_shipping_threshold', ?)",
+    [String(parseFloat(freeShippingThreshold))], function(err) {
+      if (err) return res.status(500).json({ error: 'خطأ في الحفظ' });
+      res.json({ success: true });
+    });
 });
 
 // Fallback to SPA

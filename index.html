@@ -447,7 +447,21 @@
       </div>
       <div class="form-group" style="margin-bottom:1.2rem">
         <label for="checkout-city" style="display:block; margin-bottom:0.5rem; font-weight:500" data-i18n="city">المحافظة / المدينة</label>
-        <input type="text" id="checkout-city" required placeholder="مثال: القاهرة" style="width:100%; padding:0.8rem; border:1px solid var(--border); border-radius:6px; background:var(--bg-light)">
+        <select id="checkout-city" required style="width:100%; padding:0.8rem; border:1px solid var(--border); border-radius:6px; background:var(--bg-light); color:var(--text-primary); font-family:inherit; font-size:1.4rem; cursor:pointer">
+          <option value="">-- اختر المحافظة --</option>
+        </select>
+      </div>
+      <!-- Shipping cost preview -->
+      <div id="checkout-shipping-preview" style="margin-bottom:1.2rem; padding:1rem 1.2rem; border-radius:8px; background:var(--bg-0); border:1px solid var(--border); display:none">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <span style="font-size:1.35rem; color:var(--text-muted); display:flex; align-items:center; gap:0.5rem"><i class="fa-solid fa-truck"></i> رسوم التوصيل</span>
+          <span id="checkout-shipping-cost-display" style="font-size:1.5rem; font-weight:800; color:var(--cyan)">—</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.6rem">
+          <span style="font-size:1.35rem; color:var(--text-muted)">الإجمالي</span>
+          <span id="checkout-total-display" style="font-size:1.5rem; font-weight:800; color:var(--accent)">—</span>
+        </div>
+        <p id="checkout-free-shipping-note" style="font-size:1.2rem; color:#22c55e; margin-top:0.5rem; display:none"><i class="fa-solid fa-circle-check"></i> شحن مجاني مطبق!</p>
       </div>
       <div class="form-group" style="margin-bottom:1.2rem">
         <label for="checkout-address" style="display:block; margin-bottom:0.5rem; font-weight:500" data-i18n="address">العنوان التفصيلي</label>
@@ -868,6 +882,7 @@
         <button class="admin-tab-btn" data-admin-tab="categories" data-i18n="manageCategories">الأقسام</button>
         <button class="admin-tab-btn" data-admin-tab="cms" data-i18n="manageContent">محتوى الموقع</button>
         <button class="admin-tab-btn" data-admin-tab="announcements" data-i18n="manageAnnouncements">شريط الإعلانات</button>
+        <button class="admin-tab-btn" data-admin-tab="shipping">خدمة التوصيل</button>
         <button class="admin-tab-btn" data-admin-tab="messages" data-i18n="manageMessages">الرسائل</button>
         <button class="admin-tab-btn" data-admin-tab="notifications" style="position:relative">
           <span data-i18n="manageNotifications">الإشعارات</span>
@@ -1135,6 +1150,71 @@
             </thead>
             <tbody id="admin-ann-tbody">
               <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SHIPPING TAB -->
+      <div id="admin-tab-shipping" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+          <h2 class="panel-title" style="margin:0">إدارة خدمة التوصيل</h2>
+          <button class="btn cyan-btn btn-sm" id="add-gov-btn"><i class="fa-solid fa-plus"></i> إضافة محافظة</button>
+        </div>
+
+        <!-- Free Shipping Threshold Config -->
+        <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);padding:2.4rem;margin-bottom:2.4rem">
+          <h3 style="color:#fff;margin-bottom:1.6rem;font-size:1.6rem"><i class="fa-solid fa-gift" style="color:var(--cyan)"></i> إعداد الشحن المجاني</h3>
+          <div style="display:flex;align-items:center;gap:1.6rem;flex-wrap:wrap">
+            <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0">
+              <label style="display:block;margin-bottom:0.6rem;font-weight:600;font-size:1.35rem">الحد الأدنى للشحن المجاني (جنيه)</label>
+              <input type="number" id="free-shipping-threshold-input" min="0" step="50" placeholder="مثال: 1500" style="width:100%;padding:1rem;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg-1);color:#fff;font-size:1.4rem">
+            </div>
+            <button class="btn primary-btn" id="save-threshold-btn" style="align-self:flex-end;padding:1rem 2rem">
+              <i class="fa-solid fa-floppy-disk"></i> حفظ
+            </button>
+          </div>
+          <p style="font-size:1.2rem;color:var(--text-muted);margin-top:0.8rem">💡 إذا كانت قيمة الطلب أكبر من أو تساوي هذا المبلغ، يُطبَّق الشحن المجاني تلقائياً. اجعلها 0 لإلغاء الشحن المجاني.</p>
+        </div>
+
+        <!-- Add Governorate Form (hidden by default) -->
+        <div id="gov-form-wrapper" class="hidden" style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);padding:2.4rem;margin-bottom:2.4rem">
+          <h3 style="color:#fff;margin-bottom:1.6rem;font-size:1.5rem" id="gov-form-title">إضافة محافظة جديدة</h3>
+          <form id="gov-form">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label style="font-size:1.3rem;font-weight:600">اسم المحافظة (عربي)</label>
+                <input type="text" id="gf-name-ar" required placeholder="مثال: القاهرة">
+              </div>
+              <div class="form-group">
+                <label style="font-size:1.3rem;font-weight:600">Name (English)</label>
+                <input type="text" id="gf-name-en" required placeholder="e.g. Cairo">
+              </div>
+            </div>
+            <div class="form-group">
+              <label style="font-size:1.3rem;font-weight:600">تكلفة الشحن (جنيه)</label>
+              <input type="number" id="gf-cost" required min="0" step="5" placeholder="مثال: 60">
+            </div>
+            <div style="display:flex;gap:1.2rem;margin-top:1rem">
+              <button type="submit" class="btn primary-btn" id="gf-submit-btn">حفظ</button>
+              <button type="button" class="btn outline-btn" id="gf-cancel-btn">إلغاء</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Governorates Table -->
+        <div class="admin-table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>المحافظة</th>
+                <th>Governorate</th>
+                <th>تكلفة الشحن</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="admin-shipping-tbody">
+              <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
             </tbody>
           </table>
         </div>
