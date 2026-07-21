@@ -211,6 +211,31 @@ client.execute(`CREATE TABLE IF NOT EXISTS reviews (
   });
 }).catch((err) => {
   console.error('Error creating reviews table:', err);
+// Ensure size guide keys exist in site_content table
+client.execute(`CREATE TABLE IF NOT EXISTS site_content (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  section TEXT NOT NULL,
+  key_name TEXT NOT NULL UNIQUE,
+  value_ar TEXT,
+  value_en TEXT,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`).then(() => {
+  const defaultSizes = [
+    { size: 'M', chest: '96–101', waist: '81–86', hip: '99–104' },
+    { size: 'L', chest: '104–109', waist: '89–94', hip: '107–112' },
+    { size: 'XL', chest: '112–117', waist: '97–102', hip: '115–120' },
+    { size: '2XL', chest: '120–125', waist: '105–110', hip: '123–128' }
+  ];
+  const defaultSizesJson = JSON.stringify(defaultSizes);
+  const defaultNoteAr = '💡 في حالة الشك، نوصي باختيار المقاس الأكبر للحصول على قصة أكثر راحة.';
+  const defaultNoteEn = '💡 In case of doubt, we recommend choosing the larger size for a more comfortable fit.';
+
+  db.run(`INSERT OR IGNORE INTO site_content (section, key_name, value_ar, value_en) VALUES (?, ?, ?, ?)`,
+    ['دليل المقاسات', 'size_guide_json', defaultSizesJson, defaultSizesJson]);
+  db.run(`INSERT OR IGNORE INTO site_content (section, key_name, value_ar, value_en) VALUES (?, ?, ?, ?)`,
+    ['دليل المقاسات', 'size_guide_note', defaultNoteAr, defaultNoteEn]);
+}).catch((err) => {
+  console.error('Error ensuring site_content size_guide seeds:', err);
 });
 
 console.log('Connected to:', dbUrl.startsWith('file:') ? 'Local SQLite' : 'Turso Cloud DB');

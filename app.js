@@ -328,6 +328,7 @@ function applyTranslations() {
   renderCartBadge();
   renderWishlistBadge();
   renderAnnouncements();
+  renderSizeGuide();
 }
 
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
@@ -1738,6 +1739,7 @@ async function loadAdminData() {
     { name: 'Messages', fn: loadAdminChats },
     { name: 'Announcements', fn: loadAdminAnnouncements },
     { name: 'Notifications', fn: loadAdminNotifications },
+    { name: 'SizeGuide', fn: loadAdminSizeGuide },
   ];
   for (const task of tasks) {
     try {
@@ -2817,10 +2819,37 @@ function setupAdminTabs() {
         loadAdminChats();
       } else if (tab === 'shipping') {
         loadAdminShipping();
+      } else if (tab === 'size-guide') {
+        loadAdminSizeGuide();
       }
     });
   });
   $('admin-clear-notifs-btn')?.addEventListener('click', markAllNotificationsRead);
+  $('admin-add-size-row-btn')?.addEventListener('click', () => {
+    adminSizeGuideData.push({ size: 'NEW', chest: '—', waist: '—', hip: '—' });
+    renderAdminSizeGuideTable();
+  });
+  $('admin-save-size-note-btn')?.addEventListener('click', async () => {
+    const valueAr = $('admin-size-note-ar').value.trim();
+    const valueEn = $('admin-size-note-en').value.trim();
+    try {
+      const res = await apiFetch('/api/admin/content/size_guide_note', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valueAr, valueEn })
+      });
+      if (res && res.ok) {
+        showToast(currentLang === 'ar' ? 'تم حفظ الملاحظة بنجاح' : 'Note saved successfully');
+        await fetchCMSContent();
+        renderSizeGuide();
+      } else {
+        showToast(currentLang === 'ar' ? 'فشل حفظ الملاحظة' : 'Failed to save note', 'error');
+      }
+    } catch(e) {
+      console.error(e);
+      showToast(currentLang === 'ar' ? 'خطأ في حفظ الملاحظة' : 'Error saving note', 'error');
+    }
+  });
 }
 
 // ─── ADMIN: Shipping Management ───────────────────────────────────────────────
@@ -3397,6 +3426,156 @@ function setupProductReviews() {
       }
     }
   });
+}
+
+// ─── SIZE GUIDE MANAGEMENT ───────────────────────────────────────────────────
+let adminSizeGuideData = [];
+let adminSizeGuideNoteAr = '';
+let adminSizeGuideNoteEn = '';
+
+function renderSizeGuide() {
+  const tbody = $('dynamic-size-guide-tbody');
+  const tipsEl = $('dynamic-size-guide-tips');
+  if (!tbody) return;
+
+  const rawJson = translations[currentLang]?.size_guide_json || translations['ar']?.size_guide_json;
+  let rows = [];
+  try {
+    if (rawJson) rows = JSON.parse(rawJson);
+  } catch (e) {
+    console.error('Failed to parse size guide JSON:', e);
+  }
+
+  if (!rows || rows.length === 0) {
+    rows = [
+      { size: 'M', chest: '96–101', waist: '81–86', hip: '99–104' },
+      { size: 'L', chest: '104–109', waist: '89–94', hip: '107–112' },
+      { size: 'XL', chest: '112–117', waist: '97–102', hip: '115–120' },
+      { size: '2XL', chest: '120–125', waist: '105–110', hip: '123–128' }
+    ];
+  }
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td style="font-weight:800;color:#000">${r.size}</td>
+      <td style="color:#000">${r.chest}</td>
+      <td style="color:#000">${r.waist}</td>
+      <td style="color:#000">${r.hip}</td>
+    </tr>
+  `).join('');
+
+  if (tipsEl) {
+    tipsEl.textContent = translations[currentLang]?.size_guide_note || translations['ar']?.size_guide_note || '💡 في حالة الشك، نوصي باختيار المقاس الأكبر للحصول على قصة أكثر راحة.';
+  }
+}
+
+async function loadAdminSizeGuide() {
+  try {
+    const res = await apiFetch('/api/admin/content');
+    if (!res) return;
+    const content = await res.json();
+
+    const jsonRow = content.find(r => r.key_name === 'size_guide_json');
+    const noteRow = content.find(r => r.key_name === 'size_guide_note');
+
+    adminSizeGuideNoteAr = noteRow ? noteRow.value_ar : '';
+    adminSizeGuideNoteEn = noteRow ? noteRow.value_en : '';
+
+    const noteArInput = $('admin-size-note-ar');
+    const noteEnInput = $('admin-size-note-en');
+    if (noteArInput) noteArInput.value = adminSizeGuideNoteAr;
+    if (noteEnInput) noteEnInput.value = adminSizeGuideNoteEn;
+
+    const rawJson = jsonRow ? jsonRow.value_ar : '';
+    try {
+      adminSizeGuideData = rawJson ? JSON.parse(rawJson) : [];
+    } catch(e) {
+      console.error('Failed to parse size guide JSON', e);
+      adminSizeGuideData = [];
+    }
+
+    renderAdminSizeGuideTable();
+  } catch(e) {
+    console.error('Failed to load size guide:', e);
+  }
+}
+
+function renderAdminSizeGuideTable() {
+  const tbody = $('admin-size-guide-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (adminSizeGuideData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem">لا توجد مقاسات مضافة. أضف مقاساً جديداً.</td></tr>`;
+    return;
+  }
+
+  adminSizeGuideData.forEach((row, index) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="size-input-field" value="${row.size}" placeholder="M" style="width:70px;padding:0.5rem;border:1px solid #000000;border-radius:4px;color:#000;background:#fff;font-weight:700;text-align:center"></td>
+      <td><input type="text" class="chest-input-field" value="${row.chest}" placeholder="96–101" style="width:110px;padding:0.5rem;border:1px solid #000000;border-radius:4px;color:#000;background:#fff;text-align:center"></td>
+      <td><input type="text" class="waist-input-field" value="${row.waist}" placeholder="81–86" style="width:110px;padding:0.5rem;border:1px solid #000000;border-radius:4px;color:#000;background:#fff;text-align:center"></td>
+      <td><input type="text" class="hip-input-field" value="${row.hip}" placeholder="99–104" style="width:110px;padding:0.5rem;border:1px solid #000000;border-radius:4px;color:#000;background:#fff;text-align:center"></td>
+      <td>
+        <button class="btn success-btn btn-sm save-size-row-btn" data-index="${index}"><i class="fa-solid fa-check"></i> حفظ</button>
+        <button class="btn danger-btn btn-sm delete-size-row-btn" data-index="${index}"><i class="fa-regular fa-trash-can"></i> حذف</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Wire buttons
+  tbody.querySelectorAll('.save-size-row-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.index);
+      const tr = btn.closest('tr');
+      const size = tr.querySelector('.size-input-field').value.trim();
+      const chest = tr.querySelector('.chest-input-field').value.trim();
+      const waist = tr.querySelector('.waist-input-field').value.trim();
+      const hip = tr.querySelector('.hip-input-field').value.trim();
+
+      if (!size) {
+        showToast(currentLang === 'ar' ? 'يجب إدخال اسم المقاس' : 'Size label is required', 'error');
+        return;
+      }
+
+      adminSizeGuideData[idx] = { size, chest, waist, hip };
+      await saveSizeGuideJSON();
+    });
+  });
+
+  tbody.querySelectorAll('.delete-size-row-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.index);
+      if (confirm(currentLang === 'ar' ? 'هل أنت متأكد من حذف هذا المقاس؟' : 'Are you sure you want to delete this size?')) {
+        adminSizeGuideData.splice(idx, 1);
+        await saveSizeGuideJSON();
+      }
+    });
+  });
+}
+
+async function saveSizeGuideJSON() {
+  try {
+    const jsonStr = JSON.stringify(adminSizeGuideData);
+    const res = await apiFetch('/api/admin/content/size_guide_json', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valueAr: jsonStr, valueEn: jsonStr })
+    });
+    if (res && res.ok) {
+      showToast(currentLang === 'ar' ? 'تم حفظ جدول المقاسات بنجاح' : 'Size guide table saved successfully');
+      await fetchCMSContent();
+      renderSizeGuide();
+      loadAdminSizeGuide();
+    } else {
+      showToast(currentLang === 'ar' ? 'فشل حفظ جدول المقاسات' : 'Failed to save size guide table', 'error');
+    }
+  } catch(e) {
+    console.error('Failed to save size guide JSON:', e);
+    showToast(currentLang === 'ar' ? 'خطأ في الاتصال بالخادم' : 'Server connection error', 'error');
+  }
 }
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────

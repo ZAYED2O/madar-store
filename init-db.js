@@ -216,6 +216,9 @@ db.serialize(async () => {
     // Logo
     ['عام', 'siteLogo', 'مدار', 'MADAR'],
     ['عام', 'siteTagline', 'الأناقة تلتقي بالهوية الرقمية', 'Where elegance meets digital identity'],
+    // Size Guide
+    ['دليل المقاسات', 'size_guide_json', '[{"size":"M","chest":"96–101","waist":"81–86","hip":"99–104"},{"size":"L","chest":"104–109","waist":"89–94","hip":"107–112"},{"size":"XL","chest":"112–117","waist":"97–102","hip":"115–120"},{"size":"2XL","chest":"120–125","waist":"105–110","hip":"123–128"}]', '[{"size":"M","chest":"96–101","waist":"81–86","hip":"99–104"},{"size":"L","slate":"L","chest":"104–109","waist":"89–94","hip":"107–112"},{"size":"XL","chest":"112–117","waist":"97–102","hip":"115–120"},{"size":"2XL","chest":"120–125","waist":"105–110","hip":"123–128"}]'],
+    ['دليل المقاسات', 'size_guide_note', '💡 في حالة الشك، نوصي باختيار المقاس الأكبر للحصول على قصة أكثر راحة.', '💡 In case of doubt, we recommend choosing the larger size for a more comfortable fit.'],
   ];
 
   const insertContent = db.prepare(`INSERT OR IGNORE INTO site_content (section, key_name, value_ar, value_en) VALUES (?,?,?,?)`);

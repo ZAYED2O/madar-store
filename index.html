@@ -401,14 +401,11 @@
     <p class="size-guide-subtitle" data-i18n="sizeGuideDesc">المقاسات بالسنتيمتر</p>
     <table class="size-table">
       <thead><tr><th data-i18n="size">مقاس</th><th data-i18n="chest">الصدر</th><th data-i18n="waist">الخصر</th><th data-i18n="hip">الورك</th></tr></thead>
-      <tbody>
-        <tr><td>M</td><td>96–101</td><td>81–86</td><td>99–104</td></tr>
-        <tr><td>L</td><td>104–109</td><td>89–94</td><td>107–112</td></tr>
-        <tr><td>XL</td><td>112–117</td><td>97–102</td><td>115–120</td></tr>
-        <tr><td>2XL</td><td>120–125</td><td>105–110</td><td>123–128</td></tr>
+      <tbody id="dynamic-size-guide-tbody">
+        <!-- Will be populated dynamically -->
       </tbody>
     </table>
-    <p class="size-guide-tips" data-i18n="sizeGuideNote">💡 في حالة الشك، نوصي باختيار المقاس الأكبر للحصول على قصة أكثر راحة.</p>
+    <p class="size-guide-tips" id="dynamic-size-guide-tips"></p>
   </div>
 </div>
 
@@ -883,6 +880,7 @@
         <button class="admin-tab-btn" data-admin-tab="cms" data-i18n="manageContent">محتوى الموقع</button>
         <button class="admin-tab-btn" data-admin-tab="announcements" data-i18n="manageAnnouncements">شريط الإعلانات</button>
         <button class="admin-tab-btn" data-admin-tab="shipping">خدمة التوصيل</button>
+        <button class="admin-tab-btn" data-admin-tab="size-guide">دليل المقاسات</button>
         <button class="admin-tab-btn" data-admin-tab="messages" data-i18n="manageMessages">الرسائل</button>
         <button class="admin-tab-btn" data-admin-tab="notifications" style="position:relative">
           <span data-i18n="manageNotifications">الإشعارات</span>
@@ -1276,6 +1274,50 @@
               <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:3rem">جارٍ التحميل...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- SIZE GUIDE TAB -->
+      <div id="admin-tab-size-guide" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+          <h2 class="panel-title" style="margin:0">إدارة دليل المقاسات</h2>
+          <button class="btn cyan-btn btn-sm" id="admin-add-size-row-btn"><i class="fa-solid fa-plus"></i> إضافة مقاس</button>
+        </div>
+
+        <!-- Sizing Table -->
+        <div class="admin-table-responsive" style="margin-bottom: 2.4rem;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="color:#000000;font-weight:900">المقاس (Size)</th>
+                <th style="color:#000000;font-weight:900">الصدر (Chest)</th>
+                <th style="color:#000000;font-weight:900">الخصر (Waist)</th>
+                <th style="color:#000000;font-weight:900">الورك (Hip)</th>
+                <th style="color:#000000;font-weight:900">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="admin-size-guide-tbody">
+              <!-- dynamic rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Size Guide Tips / General Note -->
+        <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);padding:2.4rem">
+          <h3 style="color:#fff;margin-bottom:1.6rem;font-size:1.6rem"><i class="fa-solid fa-lightbulb" style="color:var(--cyan)"></i> ملاحظة عامة / نصيحة المقاس</h3>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label style="font-size:1.3rem;font-weight:600">النصيحة بالعربية</label>
+              <textarea id="admin-size-note-ar" class="cms-text-input" rows="3" placeholder="مثال: في حالة الشك، نوصي باختيار المقاس الأكبر..."></textarea>
+            </div>
+            <div class="form-group">
+              <label style="font-size:1.3rem;font-weight:600">Tip (English)</label>
+              <textarea id="admin-size-note-en" class="cms-text-input" rows="3" placeholder="e.g. In case of doubt, we recommend choosing..."></textarea>
+            </div>
+          </div>
+          <div style="margin-top: 1.5rem;">
+            <button class="btn primary-btn" id="admin-save-size-note-btn"><i class="fa-solid fa-floppy-disk"></i> حفظ الملاحظة</button>
+          </div>
         </div>
       </div>
 
